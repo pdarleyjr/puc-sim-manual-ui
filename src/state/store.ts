@@ -2,6 +2,7 @@ import { create } from 'zustand'
 
 export type Source = 'tank' | 'hydrant'
 export type DischargeId = 'xlay1' | 'xlay2' | 'xlay3' | 'trashline' | 'twohalfA'
+export type GovernorMode = 'pressure' | 'rpm'
 
 // Hydraulics constants
 const HOSE_COEFF_C = 6.59                 // Key Combat Ready 1¾″
@@ -13,11 +14,25 @@ const LEN_CROSSLAY = 200
 const LEN_TRASHLINE = 100
 const LEN_TWOHALF_A = 200
 
+// Governor & Engine constants
+const ENGINE_IDLE = 650
+const PUMP_BASE = 750
+const MAX_RPM = 2200
+const RPM_PER_PSI = 0.6     // A: ~0.6 rpm per PSI
+const IDLE_PUMP_DELTA_PSI = 50  // "idle pump pressure" contribution (50 + 50 = 100 rule)
+
+export interface GovernorState {
+  enabled: boolean        // true once the user selects a mode
+  mode: GovernorMode      // 'pressure' or 'rpm'
+  setPsi: number          // Pressure mode setpoint, PSI (default 50)
+  setRpm: number          // RPM mode setpoint, RPM (default 1200)
+}
+
 export interface Discharge {
   id: DischargeId
   label: string
   open: boolean
-  setPsi: number
+  valvePercent: number    // Changed from setPsi to valve % open (0-100)
   foamCapable: boolean
   lengthFt: number
   gpmNow: number
@@ -41,6 +56,7 @@ export interface AppState {
   pumpEngaged: boolean
   source: Source
   foamEnabled: boolean
+  governor: GovernorState
   discharges: Record<DischargeId, Discharge>
   gauges: Gauges
   totals: Totals
@@ -54,6 +70,9 @@ export interface AppState {
   disengagePump: () => void
   setSource: (s: Source) => void
   setIntakePsi: (psi: number) => void
+  setGovernorMode: (mode: GovernorMode) => void
+  setGovernorSetPsi: (psi: number) => void
+  setGovernorSetRpm: (rpm: number) => void
   setLine: (id: DischargeId, patch: Partial<Discharge>) => void
   recomputeMasters: () => void
   tickRpm: () => void
@@ -61,20 +80,46 @@ export interface AppState {
   simTick: () => void
 }
 
-const ENGINE_IDLE = 650
-const PUMP_BASE = 750
-const MAX_RPM = 2200
-const A = 0.6   // rpm per psi of master discharge
-const B = 0.15  // rpm relief per psi of hydrant intake
+// Compute P_base (hydrant intake + idle pump contribution)
+function computePBase(state: AppState): number {
+  if (state.source === 'tank') return IDLE_PUMP_DELTA_PSI
+  return state.gauges.masterIntake + IDLE_PUMP_DELTA_PSI
+}
 
-function targetRpm(state: AppState): number {
+// Compute system discharge pressure based on governor mode and P_base threshold
+function computeSystemPressure(state: AppState): number {
+  const P_base = computePBase(state)
+  
+  if (!state.governor.enabled) {
+    return P_base
+  }
+  
+  if (state.governor.mode === 'pressure') {
+    // Pressure mode: target is governor setPsi, but at least P_base
+    return Math.min(400, Math.max(state.governor.setPsi, P_base))
+  } else {
+    // RPM mode: compute pressure from target RPM
+    const extraPsi = Math.max(0, (state.targetRpm - PUMP_BASE) / RPM_PER_PSI)
+    return Math.min(400, P_base + extraPsi)
+  }
+}
+
+// Compute target engine RPM based on governor mode and P_base threshold
+function computeTargetRpm(state: AppState): number {
   if (!state.pumpEngaged) return ENGINE_IDLE
-  const md = Math.max(
-    ...Object.values(state.discharges).map(d => d.open ? d.setPsi : 0),
-    0
-  )
-  const relief = state.source === 'hydrant' ? B * state.gauges.masterIntake : 0
-  return Math.max(ENGINE_IDLE, Math.min(MAX_RPM, Math.round(PUMP_BASE + A * md - relief)))
+  
+  if (!state.governor.enabled) return PUMP_BASE
+  
+  const P_base = computePBase(state)
+  
+  if (state.governor.mode === 'pressure') {
+    // Pressure mode: only add RPM above base if setpoint exceeds P_base
+    const extraPsi = Math.max(0, state.governor.setPsi - P_base)
+    return Math.max(ENGINE_IDLE, Math.min(MAX_RPM, Math.round(PUMP_BASE + extraPsi * RPM_PER_PSI)))
+  } else {
+    // RPM mode: target is governor setRpm
+    return Math.max(ENGINE_IDLE, Math.min(MAX_RPM, state.governor.setRpm))
+  }
 }
 
 // Flow computation from PDP
@@ -92,12 +137,18 @@ export const useStore = create<AppState>((set, get) => ({
   pumpEngaged: false,
   source: 'tank',
   foamEnabled: false,
+  governor: {
+    enabled: false,
+    mode: 'pressure',
+    setPsi: 50,
+    setRpm: 1200,
+  },
   discharges: {
-    xlay1: { id: 'xlay1', label: 'Crosslay 1', open: false, setPsi: 0, foamCapable: true, lengthFt: LEN_CROSSLAY, gpmNow: 0, gallonsThisEng: 0 },
-    xlay2: { id: 'xlay2', label: 'Crosslay 2', open: false, setPsi: 0, foamCapable: true, lengthFt: LEN_CROSSLAY, gpmNow: 0, gallonsThisEng: 0 },
-    xlay3: { id: 'xlay3', label: 'Crosslay 3', open: false, setPsi: 0, foamCapable: true, lengthFt: LEN_CROSSLAY, gpmNow: 0, gallonsThisEng: 0 },
-    trashline: { id: 'trashline', label: 'Front Trashline', open: false, setPsi: 0, foamCapable: false, lengthFt: LEN_TRASHLINE, gpmNow: 0, gallonsThisEng: 0 },
-    twohalfA: { id: 'twohalfA', label: '2½″ A', open: false, setPsi: 0, foamCapable: true, lengthFt: LEN_TWOHALF_A, gpmNow: 0, gallonsThisEng: 0 },
+    xlay1: { id: 'xlay1', label: 'Crosslay 1', open: false, valvePercent: 0, foamCapable: true, lengthFt: LEN_CROSSLAY, gpmNow: 0, gallonsThisEng: 0 },
+    xlay2: { id: 'xlay2', label: 'Crosslay 2', open: false, valvePercent: 0, foamCapable: true, lengthFt: LEN_CROSSLAY, gpmNow: 0, gallonsThisEng: 0 },
+    xlay3: { id: 'xlay3', label: 'Crosslay 3', open: false, valvePercent: 0, foamCapable: true, lengthFt: LEN_CROSSLAY, gpmNow: 0, gallonsThisEng: 0 },
+    trashline: { id: 'trashline', label: 'Front Trashline', open: false, valvePercent: 0, foamCapable: false, lengthFt: LEN_TRASHLINE, gpmNow: 0, gallonsThisEng: 0 },
+    twohalfA: { id: 'twohalfA', label: '2½″ A', open: false, valvePercent: 0, foamCapable: true, lengthFt: LEN_TWOHALF_A, gpmNow: 0, gallonsThisEng: 0 },
   },
   gauges: {
     masterIntake: 0,
@@ -165,6 +216,27 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
+  setGovernorMode: (mode) => {
+    set({
+      governor: { ...get().governor, enabled: true, mode }
+    })
+    get().recomputeMasters()
+  },
+
+  setGovernorSetPsi: (psi) => {
+    set({
+      governor: { ...get().governor, setPsi: Math.max(50, Math.min(300, psi)) }
+    })
+    get().recomputeMasters()
+  },
+
+  setGovernorSetRpm: (rpm) => {
+    set({
+      governor: { ...get().governor, setRpm: Math.max(750, Math.min(2200, rpm)) }
+    })
+    get().recomputeMasters()
+  },
+
   setLine: (id, patch) => {
     set({
       discharges: {
@@ -177,11 +249,16 @@ export const useStore = create<AppState>((set, get) => ({
 
   recomputeMasters: () => {
     const state = get()
-    const masterDischarge = Math.min(
-      Math.max(...Object.values(state.discharges).map(d => d.open ? d.setPsi : 0), 0),
-      400
+    const P_system = computeSystemPressure(state)
+    
+    // Master discharge is max of all per-line pressures
+    const linePressures = Object.values(state.discharges).map(d => 
+      d.open ? (d.valvePercent / 100) * P_system : 0
     )
-    const newTargetRpm = targetRpm({ ...state, gauges: { ...state.gauges, masterDischarge } })
+    const masterDischarge = Math.min(Math.max(...linePressures, 0), 400)
+    
+    const newTargetRpm = computeTargetRpm(state)
+    
     set({
       gauges: { ...state.gauges, masterDischarge },
       targetRpm: newTargetRpm,
@@ -207,14 +284,17 @@ export const useStore = create<AppState>((set, get) => ({
     const dtMs = state.lastSimTick > 0 ? now - state.lastSimTick : 100
     set({ lastSimTick: now })
 
+    const P_system = computeSystemPressure(state)
+
     // 1) Per-line flows
     let totalGpm = 0
     const updatedDischarges = { ...state.discharges }
 
     for (const id of Object.keys(state.discharges) as DischargeId[]) {
       const d = updatedDischarges[id]
-      const supplyPdp = d.open ? d.setPsi : 0
-      const { gpm } = computeFogFlowFromPdp(supplyPdp, d.lengthFt)
+      // Per-line pressure = valve% × system pressure
+      const P_line = d.open ? (d.valvePercent / 100) * P_system : 0
+      const { gpm } = computeFogFlowFromPdp(P_line, d.lengthFt)
 
       // Tank empty logic: if on tank and water==0 → no flow
       const effectiveGpm = (state.source === 'tank' && state.gauges.waterGal <= 0) ? 0 : gpm

@@ -3,7 +3,7 @@ import { useStore } from '../state/store'
 import { StatusBar } from './StatusBar'
 import { SettingsModal } from './SettingsModal'
 import { AnalogGauge } from './Gauges'
-import { DischargeCard, IntakeCard, LevelsCard, PumpDataCard } from './Cards'
+import { DischargeCard, IntakeCard, LevelsCard, PumpDataCard, GovernorCard } from './Cards'
 import { useEngineAudio } from '../audio/useEngineAudio'
 
 export function Panel() {
@@ -96,7 +96,7 @@ export function Panel() {
         ) : (
           /* Main Panel Screen */
           <div className="grid grid-cols-12 gap-6">
-            {/* Left Column - Engage Indicators */}
+            {/* Left Column - Status, Source, Levels */}
             <div className="col-span-2 space-y-4">
               <div className="puc-card">
                 <h3 className="text-sm font-semibold mb-3 text-center opacity-80">STATUS</h3>
@@ -130,6 +130,9 @@ export function Panel() {
                   </div>
                 </div>
               </div>
+              
+              <IntakeCard />
+              <LevelsCard />
             </div>
 
             {/* Center - Master Gauges & Discharges */}
@@ -176,10 +179,9 @@ export function Panel() {
               </div>
             </div>
 
-            {/* Right Column - Supply & Levels */}
+            {/* Right Column - Governor & Pump Data */}
             <div className="col-span-2 space-y-4">
-              <IntakeCard />
-              <LevelsCard />
+              <GovernorCard />
               <PumpDataCard />
             </div>
           </div>

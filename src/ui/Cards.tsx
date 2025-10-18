@@ -8,17 +8,31 @@ interface DischargeCardProps {
 
 export function DischargeCard({ discharge }: DischargeCardProps) {
   const setLine = useStore(state => state.setLine)
-  const displayPsi = discharge.open ? discharge.setPsi : 0
+  const governor = useStore(state => state.governor)
+  const source = useStore(state => state.source)
+  const masterIntake = useStore(state => state.gauges.masterIntake)
+  
+  // Compute system pressure to show actual line pressure
+  const IDLE_PUMP_DELTA_PSI = 50
+  const P_base = source === 'tank' ? IDLE_PUMP_DELTA_PSI : masterIntake + IDLE_PUMP_DELTA_PSI
+  let P_system = P_base
+  if (governor.enabled) {
+    if (governor.mode === 'pressure') {
+      P_system = Math.min(400, Math.max(governor.setPsi, P_base))
+    }
+  }
+  
+  const displayPsi = discharge.open ? (discharge.valvePercent / 100) * P_system : 0
 
   const handleToggle = () => {
     setLine(discharge.id, { open: !discharge.open })
   }
 
-  const handleSetPsi = (psi: number) => {
-    setLine(discharge.id, { setPsi: Math.max(0, Math.min(400, psi)) })
+  const handleSetPercent = (percent: number) => {
+    setLine(discharge.id, { valvePercent: Math.max(0, Math.min(100, percent)) })
   }
 
-  const quicksets = [95, 125, 150]
+  const quicksets = [50, 75, 100]
 
   return (
     <div className="puc-card">
@@ -51,32 +65,32 @@ export function DischargeCard({ discharge }: DischargeCardProps) {
         </button>
       </div>
       
-      {/* Set PSI Slider */}
+      {/* Valve % Open Slider */}
       <div className="mt-3">
-        <label className="text-xs opacity-60">Set PSI</label>
+        <label className="text-xs opacity-60">Valve % Open</label>
         <input
           type="range"
           min="0"
-          max="400"
+          max="100"
           step="5"
-          value={discharge.setPsi}
-          onChange={(e) => handleSetPsi(Number(e.target.value))}
+          value={discharge.valvePercent}
+          onChange={(e) => handleSetPercent(Number(e.target.value))}
           className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500"
         />
         <div className="text-center text-lg font-bold tabular-nums mt-1">
-          {discharge.setPsi} PSI
+          {discharge.valvePercent}%
         </div>
       </div>
       
       {/* Quickset buttons */}
       <div className="mt-2 flex gap-2 justify-center">
-        {quicksets.map(psi => (
+        {quicksets.map(pct => (
           <button
-            key={psi}
-            onClick={() => handleSetPsi(psi)}
+            key={pct}
+            onClick={() => handleSetPercent(pct)}
             className="px-3 py-1 text-xs rounded bg-white/10 hover:bg-white/20 transition-all"
           >
-            {psi}
+            {pct}%
           </button>
         ))}
       </div>
@@ -84,6 +98,120 @@ export function DischargeCard({ discharge }: DischargeCardProps) {
       {discharge.foamCapable && (
         <div className="mt-2 text-center text-xs text-pink-400 opacity-60">
           Foam Capable
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function GovernorCard() {
+  const governor = useStore(state => state.governor)
+  const setGovernorMode = useStore(state => state.setGovernorMode)
+  const setGovernorSetPsi = useStore(state => state.setGovernorSetPsi)
+  const setGovernorSetRpm = useStore(state => state.setGovernorSetRpm)
+
+  const handleModeSelect = (mode: 'pressure' | 'rpm') => {
+    setGovernorMode(mode)
+  }
+
+  const handleSetToIdle = () => {
+    if (governor.mode === 'rpm') {
+      setGovernorSetRpm(750)
+    }
+  }
+
+  return (
+    <div className="puc-card">
+      <h3 className="text-sm font-semibold mb-3 text-center opacity-80">GOVERNOR</h3>
+      
+      {/* Mode Pills */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => handleModeSelect('pressure')}
+          className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all ${
+            governor.enabled && governor.mode === 'pressure'
+              ? 'bg-emerald-500 text-white'
+              : 'bg-white/10 text-white/60 hover:bg-white/20'
+          }`}
+        >
+          PRESSURE
+        </button>
+        <button
+          onClick={() => handleModeSelect('rpm')}
+          className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all ${
+            governor.enabled && governor.mode === 'rpm'
+              ? 'bg-emerald-500 text-white'
+              : 'bg-white/10 text-white/60 hover:bg-white/20'
+          }`}
+        >
+          RPM
+        </button>
+      </div>
+
+      {/* Main Display Tile */}
+      <div className="bg-black/30 rounded-lg p-4 mb-4">
+        <div className="text-center">
+          <div className="text-xs opacity-60 mb-1">
+            {governor.mode === 'pressure' ? 'Set Pressure' : 'Set Engine RPM'}
+          </div>
+          <div className="text-4xl font-bold tabular-nums text-emerald-400">
+            {governor.mode === 'pressure' ? governor.setPsi : governor.setRpm}
+          </div>
+          <div className="text-sm opacity-80 mt-1">
+            {governor.mode === 'pressure' ? 'PSI' : 'RPM'}
+          </div>
+        </div>
+      </div>
+
+      {/* Setpoint Slider */}
+      {governor.enabled && (
+        <div className="mb-3">
+          {governor.mode === 'pressure' ? (
+            <>
+              <label className="text-xs opacity-60">Set Pressure (PSI)</label>
+              <input
+                type="range"
+                min="50"
+                max="300"
+                step="1"
+                value={governor.setPsi}
+                onChange={(e) => setGovernorSetPsi(Number(e.target.value))}
+                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer mt-2 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500"
+              />
+            </>
+          ) : (
+            <>
+              <label className="text-xs opacity-60">Set Engine RPM</label>
+              <input
+                type="range"
+                min="750"
+                max="2200"
+                step="10"
+                value={governor.setRpm}
+                onChange={(e) => setGovernorSetRpm(Number(e.target.value))}
+                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer mt-2 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500"
+              />
+              <div className="mt-2 flex justify-center">
+                <button
+                  onClick={handleSetToIdle}
+                  className="px-3 py-1 text-xs rounded bg-white/10 hover:bg-white/20 transition-all"
+                >
+                  IDLE (750)
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Info Note */}
+      <div className="text-xs text-center opacity-60 mt-3 leading-relaxed">
+        Lines receive a fraction of pump pressure based on valve opening.
+      </div>
+
+      {!governor.enabled && (
+        <div className="text-xs text-center opacity-60 mt-2 p-2 bg-white/5 rounded">
+          Select PRESSURE or RPM mode to enable governor
         </div>
       )}
     </div>
