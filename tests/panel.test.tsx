@@ -7,7 +7,7 @@ describe('PUC Manual Pump Rules', () => {
     // Reset store to initial state
     const { disengagePump, setSource, setLine } = useStore.getState()
     disengagePump()
-    setSource('tank')
+    setSource('none')
     
     // Fully reset gauges including water level
     useStore.setState({
@@ -17,6 +17,7 @@ describe('PUC Manual Pump Rules', () => {
         rpm: 650,
         waterGal: 720,
         foamGal: 30,
+        pumpTempF: 120,
       },
       governor: {
         enabled: false,
@@ -35,8 +36,9 @@ describe('PUC Manual Pump Rules', () => {
 
   describe('Master Discharge Calculation', () => {
     it('should equal the highest setPsi among open lines', () => {
-      const { engagePump, setLine, setGovernorMode, setGovernorSetPsi } = useStore.getState()
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       
@@ -55,8 +57,9 @@ describe('PUC Manual Pump Rules', () => {
     })
 
     it('should be 0 when no lines are open', () => {
-      const { engagePump, setLine, setGovernorMode, setGovernorSetPsi } = useStore.getState()
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       setGovernorSetPsi(150)
@@ -69,8 +72,9 @@ describe('PUC Manual Pump Rules', () => {
     })
 
     it('should be capped at 400 PSI', () => {
-      const { engagePump, setLine, setGovernorMode, setGovernorSetPsi } = useStore.getState()
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       setGovernorSetPsi(300)
@@ -84,6 +88,7 @@ describe('PUC Manual Pump Rules', () => {
     it('should set masterIntake to 50 PSI when switching from Tank to Hydrant (if currently 0)', () => {
       const { engagePump, setSource, gauges } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       expect(gauges.masterIntake).toBe(0) // Tank default
       
@@ -94,6 +99,7 @@ describe('PUC Manual Pump Rules', () => {
     it('should lock masterIntake at 0 when source is Tank', () => {
       const { engagePump, setSource, setIntakePsi } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setSource('tank')
       
@@ -105,6 +111,7 @@ describe('PUC Manual Pump Rules', () => {
     it('should allow adjusting masterIntake when source is Hydrant', () => {
       const { engagePump, setSource, setIntakePsi } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setSource('hydrant')
       
@@ -118,6 +125,7 @@ describe('PUC Manual Pump Rules', () => {
     it('should default to 50 PSI when switching back to Hydrant from Tank', () => {
       const { engagePump, setSource, setIntakePsi } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setSource('hydrant')
       setIntakePsi(100)
@@ -137,6 +145,7 @@ describe('PUC Manual Pump Rules', () => {
     it('should not affect Master Discharge when Master Intake changes', () => {
       const { engagePump, setSource, setLine, setIntakePsi, setGovernorMode, setGovernorSetPsi } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setSource('hydrant')
       
@@ -158,8 +167,9 @@ describe('PUC Manual Pump Rules', () => {
 
   describe('RPM Calculation (Affinity Laws)', () => {
     it('should increase with master discharge', () => {
-      const { engagePump, setLine, setGovernorMode, setGovernorSetPsi, recomputeMasters } = useStore.getState()
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi, recomputeMasters } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       const baseRpm = useStore.getState().targetRpm
@@ -182,6 +192,7 @@ describe('PUC Manual Pump Rules', () => {
     it('should be slightly lower on hydrant with positive intake for same discharge', () => {
       const { engagePump, setSource, setLine, setIntakePsi, setGovernorMode, setGovernorSetPsi, recomputeMasters } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       
@@ -205,8 +216,9 @@ describe('PUC Manual Pump Rules', () => {
     })
 
     it('should not exceed MAX_RPM (2200)', () => {
-      const { engagePump, setLine, setGovernorMode, setGovernorSetPsi, recomputeMasters } = useStore.getState()
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi, recomputeMasters } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       
@@ -219,8 +231,9 @@ describe('PUC Manual Pump Rules', () => {
     })
 
     it('should return to idle when pump is disengaged', () => {
-      const { engagePump, disengagePump, setLine, setGovernorMode, setGovernorSetPsi, recomputeMasters } = useStore.getState()
+      const { engagePump, disengagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi, recomputeMasters } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       setGovernorSetPsi(200)
@@ -255,8 +268,9 @@ describe('PUC Manual Pump Rules', () => {
 
   describe('Hydraulics Simulation', () => {
     it('should compute correct GPM for a line with valve at 100% and governor at 115 psi', () => {
-      const { engagePump, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       setGovernorSetPsi(115)
@@ -274,8 +288,9 @@ describe('PUC Manual Pump Rules', () => {
     })
 
     it('should compute correct total GPM when opening two lines', () => {
-      const { engagePump, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       setGovernorSetPsi(115)
@@ -293,8 +308,9 @@ describe('PUC Manual Pump Rules', () => {
     })
 
     it('should accumulate gallons over time', () => {
-      const { engagePump, setLine, setGovernorMode, setGovernorSetPsi } = useStore.getState()
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       setGovernorSetPsi(115)
@@ -314,8 +330,9 @@ describe('PUC Manual Pump Rules', () => {
     })
 
     it('should deplete tank over time when source is Tank', () => {
-      const { engagePump, setLine, setGovernorMode, setGovernorSetPsi } = useStore.getState()
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       const initialWater = useStore.getState().gauges.waterGal
@@ -334,8 +351,9 @@ describe('PUC Manual Pump Rules', () => {
     })
 
     it('should stop flow when tank reaches 0 gallons', () => {
-      const { engagePump, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       
@@ -357,6 +375,7 @@ describe('PUC Manual Pump Rules', () => {
     it('should stop tank depletion when switching to Hydrant', () => {
       const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       setGovernorSetPsi(115)
@@ -387,8 +406,9 @@ describe('PUC Manual Pump Rules', () => {
     })
 
     it('should reset all engagement counters when pump is disengaged', () => {
-      const { engagePump, disengagePump, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
+      const { engagePump, disengagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       setGovernorSetPsi(115)
@@ -419,8 +439,9 @@ describe('PUC Manual Pump Rules', () => {
     })
 
     it('should compute higher flow at higher PDP', () => {
-      const { engagePump, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       
@@ -441,8 +462,9 @@ describe('PUC Manual Pump Rules', () => {
     })
 
     it('should compute different flows for different hose lengths', () => {
-      const { engagePump, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       setGovernorSetPsi(115)
@@ -466,6 +488,7 @@ describe('PUC Manual Pump Rules', () => {
     it('should maintain P_base (100 PSI) with hydrant=50 and governor=50 in pressure mode', () => {
       const { engagePump, setSource, setIntakePsi, setGovernorMode, setGovernorSetPsi, setLine, recomputeMasters } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setSource('hydrant')
       setIntakePsi(50)
@@ -487,6 +510,7 @@ describe('PUC Manual Pump Rules', () => {
     it('should surpass P_base threshold when governor setPsi exceeds 100', () => {
       const { engagePump, setSource, setIntakePsi, setGovernorMode, setGovernorSetPsi, setLine, recomputeMasters } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setSource('hydrant')
       setIntakePsi(50)
@@ -510,6 +534,7 @@ describe('PUC Manual Pump Rules', () => {
     it('should throttle discharge pressure with partial valve opening', () => {
       const { engagePump, setSource, setIntakePsi, setGovernorMode, setGovernorSetPsi, setLine, recomputeMasters } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setSource('hydrant')
       setIntakePsi(50)
@@ -527,6 +552,7 @@ describe('PUC Manual Pump Rules', () => {
     it('should maintain RPM in RPM mode without auto-correcting pressure', () => {
       const { engagePump, setSource, setIntakePsi, setGovernorMode, setGovernorSetRpm, setLine, recomputeMasters } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setSource('hydrant')
       setIntakePsi(50)
@@ -555,6 +581,7 @@ describe('PUC Manual Pump Rules', () => {
     it('should maintain tank/hydrant intake rules with governor enabled', () => {
       const { engagePump, setSource, setGovernorMode, setGovernorSetPsi } = useStore.getState()
       
+      setSource('tank')
       engagePump('water')
       setGovernorMode('pressure')
       setGovernorSetPsi(150)

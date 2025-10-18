@@ -11,14 +11,26 @@ export function DischargeCard({ discharge }: DischargeCardProps) {
   const governor = useStore(state => state.governor)
   const source = useStore(state => state.source)
   const masterIntake = useStore(state => state.gauges.masterIntake)
+  const waterGal = useStore(state => state.gauges.waterGal)
   
   // Compute system pressure to show actual line pressure
   const IDLE_PUMP_DELTA_PSI = 50
-  const P_base = source === 'tank' ? IDLE_PUMP_DELTA_PSI : masterIntake + IDLE_PUMP_DELTA_PSI
-  let P_system = P_base
-  if (governor.enabled) {
-    if (governor.mode === 'pressure') {
-      P_system = Math.min(400, Math.max(governor.setPsi, P_base))
+  
+  // Check if water is available (dry pump guard)
+  const waterAvailable =
+    (source === 'hydrant' && masterIntake > 0) ||
+    (source === 'tank' && waterGal > 0)
+  
+  let P_system = 0
+  if (waterAvailable) {
+    const P_base = source === 'tank' 
+      ? IDLE_PUMP_DELTA_PSI 
+      : masterIntake + IDLE_PUMP_DELTA_PSI
+    P_system = P_base
+    if (governor.enabled) {
+      if (governor.mode === 'pressure') {
+        P_system = Math.min(400, Math.max(governor.setPsi, P_base))
+      }
     }
   }
   
@@ -238,7 +250,7 @@ export function IntakeCard() {
               : 'bg-white/10 text-white/60 hover:bg-white/20'
           }`}
         >
-          Tank
+          Tank-to-Pump
         </button>
         <button
           onClick={() => setSource('hydrant')}
@@ -276,7 +288,14 @@ export function IntakeCard() {
       
       {source === 'tank' && (
         <div className="text-center text-sm opacity-60 py-4">
-          Tank mode: Intake locked at 0 PSI
+          Tank-to-Pump mode: Intake locked at 0 PSI
+        </div>
+      )}
+      
+      {source === 'none' && (
+        <div className="text-center text-sm opacity-60 py-4 bg-red-500/10 rounded border border-red-500/30">
+          <div className="font-semibold text-red-400 mb-1">NO SOURCE SELECTED</div>
+          <div className="text-xs">Select Tank-to-Pump or Hydrant to supply water</div>
         </div>
       )}
     </div>

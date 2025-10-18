@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type Source = 'tank' | 'hydrant'
+export type Source = 'none' | 'tank' | 'hydrant'
 export type DischargeId = 'xlay1' | 'xlay2' | 'xlay3' | 'trashline' | 'twohalfA'
 export type GovernorMode = 'pressure' | 'rpm'
 
@@ -45,6 +45,7 @@ export interface Gauges {
   rpm: number               // 650..2200
   waterGal: number          // 0..720
   foamGal: number           // 0..30
+  pumpTempF: number         // 120..240 (pump casing/seal temperature)
 }
 
 export interface Totals {
@@ -64,6 +65,7 @@ export interface AppState {
   soundOn: boolean
   targetRpm: number
   lastSimTick: number
+  warnings: string[]
 
   // Actions
   engagePump: (mode: 'water' | 'foam') => void
@@ -78,16 +80,24 @@ export interface AppState {
   tickRpm: () => void
   setSoundOn: (on: boolean) => void
   simTick: () => void
+  ackWarning: (code: string) => void
 }
 
 // Compute P_base (hydrant intake + idle pump contribution)
 function computePBase(state: AppState): number {
-  if (state.source === 'tank') return IDLE_PUMP_DELTA_PSI
+  if (state.source === 'none' || state.source === 'tank') return IDLE_PUMP_DELTA_PSI
   return state.gauges.masterIntake + IDLE_PUMP_DELTA_PSI
 }
 
 // Compute system discharge pressure based on governor mode and P_base threshold
 function computeSystemPressure(state: AppState): number {
+  // Dry pump guard: no water available means P_system = 0
+  const waterAvailable =
+    (state.source === 'hydrant' && state.gauges.masterIntake > 0) ||
+    (state.source === 'tank' && state.gauges.waterGal > 0)
+  
+  if (!waterAvailable) return 0
+  
   const P_base = computePBase(state)
   
   if (!state.governor.enabled) {
@@ -135,7 +145,7 @@ function computeFogFlowFromPdp(pdp: number, lengthFt: number): { gpm: number; np
 
 export const useStore = create<AppState>((set, get) => ({
   pumpEngaged: false,
-  source: 'tank',
+  source: 'none',
   foamEnabled: false,
   governor: {
     enabled: false,
@@ -156,6 +166,7 @@ export const useStore = create<AppState>((set, get) => ({
     rpm: ENGINE_IDLE,
     waterGal: 720,
     foamGal: 30,
+    pumpTempF: 120,
   },
   totals: {
     gpmTotalNow: 0,
@@ -165,13 +176,13 @@ export const useStore = create<AppState>((set, get) => ({
   soundOn: false,
   targetRpm: ENGINE_IDLE,
   lastSimTick: 0,
+  warnings: [],
 
   engagePump: (mode) => {
     set({
       pumpEngaged: true,
-      source: 'tank',
       foamEnabled: mode === 'foam',
-      gauges: { ...get().gauges, rpm: PUMP_BASE, masterIntake: 0 },
+      gauges: { ...get().gauges, rpm: PUMP_BASE },
       targetRpm: PUMP_BASE,
       lastSimTick: performance.now(),
     })
@@ -198,12 +209,14 @@ export const useStore = create<AppState>((set, get) => ({
 
   setSource: (s) => {
     const state = get()
-    const newIntake = s === 'hydrant' && state.gauges.masterIntake === 0 ? 50 : state.gauges.masterIntake
+    // Mutual exclusivity: clicking same source toggles to 'none'
+    const newSource = state.source === s ? 'none' : s
+    const newIntake = newSource === 'hydrant' && state.gauges.masterIntake === 0 ? 50 : state.gauges.masterIntake
     set({
-      source: s,
+      source: newSource,
       gauges: {
         ...state.gauges,
-        masterIntake: s === 'tank' ? 0 : newIntake,
+        masterIntake: newSource === 'tank' || newSource === 'none' ? 0 : newIntake,
       },
     })
     get().recomputeMasters()
@@ -276,6 +289,10 @@ export const useStore = create<AppState>((set, get) => ({
 
   setSoundOn: (on) => set({ soundOn: on }),
 
+  ackWarning: (code) => {
+    set({ warnings: get().warnings.filter(w => w !== code) })
+  },
+
   simTick: () => {
     const state = get()
     if (!state.pumpEngaged) return
@@ -285,6 +302,50 @@ export const useStore = create<AppState>((set, get) => ({
     set({ lastSimTick: now })
 
     const P_system = computeSystemPressure(state)
+
+    // Overheating model constants
+    const DRY_HEAT_RATE_F_PER_S_BASE = 0.5
+    const DRY_HEAT_RATE_F_PER_S_PER_500RPM = 0.6
+    const WET_COOL_RATE_F_PER_S = 1.0
+    const TEMP_MIN = 120
+    const TEMP_WARN = 200
+    const TEMP_MAX = 240
+
+    const isWaterAvailable =
+      (state.source === 'hydrant' && state.gauges.masterIntake > 0) ||
+      (state.source === 'tank' && state.gauges.waterGal > 0)
+
+    // Update pump temperature
+    let newPumpTempF = state.gauges.pumpTempF
+    if (state.pumpEngaged) {
+      if (!isWaterAvailable) {
+        const rpm = state.gauges.rpm
+        const overBase = Math.max(0, rpm - 750)
+        const heatRate = DRY_HEAT_RATE_F_PER_S_BASE + DRY_HEAT_RATE_F_PER_S_PER_500RPM * (overBase / 500)
+        newPumpTempF = Math.min(TEMP_MAX, newPumpTempF + heatRate * (dtMs / 1000))
+      } else {
+        newPumpTempF = Math.max(TEMP_MIN, newPumpTempF - WET_COOL_RATE_F_PER_S * (dtMs / 1000))
+      }
+    } else {
+      // Pump off: cool toward ambient
+      newPumpTempF = Math.max(TEMP_MIN, newPumpTempF - 0.5 * (dtMs / 1000))
+    }
+
+    // Warning injection
+    const warningCode = 'PUMP OVERHEATING — NO WATER SUPPLY'
+    const hot = newPumpTempF >= TEMP_WARN && !isWaterAvailable
+    const exists = state.warnings.includes(warningCode)
+    let newWarnings = [...state.warnings]
+    if (hot && !exists) {
+      newWarnings.push(warningCode)
+    }
+    if (!hot && exists) {
+      newWarnings = newWarnings.filter(w => w !== warningCode)
+    }
+    // Clear warning when pump disengaged
+    if (!state.pumpEngaged) {
+      newWarnings = newWarnings.filter(w => !w.startsWith('PUMP OVERHEATING'))
+    }
 
     // 1) Per-line flows
     let totalGpm = 0
@@ -320,7 +381,8 @@ export const useStore = create<AppState>((set, get) => ({
     set({
       discharges: updatedDischarges,
       totals: newTotals,
-      gauges: { ...state.gauges, waterGal: newWaterGal },
+      gauges: { ...state.gauges, waterGal: newWaterGal, pumpTempF: newPumpTempF },
+      warnings: newWarnings,
     })
   },
 }))

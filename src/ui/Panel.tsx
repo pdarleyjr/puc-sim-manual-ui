@@ -1,10 +1,38 @@
 import { useEffect, useState } from 'react'
+import { X } from 'lucide-react'
 import { useStore } from '../state/store'
 import { StatusBar } from './StatusBar'
 import { SettingsModal } from './SettingsModal'
 import { AnalogGauge } from './Gauges'
 import { DischargeCard, IntakeCard, LevelsCard, PumpDataCard, GovernorCard } from './Cards'
 import { useEngineAudio } from '../audio/useEngineAudio'
+
+function WarningBanner() {
+  const warnings = useStore(state => state.warnings)
+  const ackWarning = useStore(state => state.ackWarning)
+  
+  if (warnings.length === 0) return null
+  
+  return (
+    <div className="bg-red-600 border-b border-red-700 px-6 py-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="text-white font-bold text-sm flex items-center gap-2">
+            <span className="animate-pulse">⚠️</span>
+            {warnings[0]}
+          </div>
+        </div>
+        <button
+          onClick={() => ackWarning(warnings[0])}
+          className="flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-white text-xs font-semibold transition-all"
+        >
+          <X size={14} />
+          CLEAR
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export function Panel() {
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -58,6 +86,9 @@ export function Panel() {
     <div className="min-h-screen flex flex-col">
       {/* Status Bar */}
       <StatusBar onOpenSettings={() => setSettingsOpen(true)} />
+      
+      {/* Warning Banner */}
+      <WarningBanner />
 
       {/* Main Content */}
       <div className="flex-1 p-6">

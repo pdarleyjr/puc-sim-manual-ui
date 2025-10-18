@@ -16,11 +16,13 @@ export function StatusBar({ onOpenSettings }: StatusBarProps) {
   const foamEnabled = useStore(state => state.foamEnabled)
   const waterCap = useStore(state => state.capacities.water)
   const foamCap = useStore(state => state.capacities.foam)
-
-  const warnings = 0 // Placeholder for future warning logic
+  const warnings = useStore(state => state.warnings)
   
   const waterPct = (waterGal / waterCap) * 100
   const foamPct = (foamGal / foamCap) * 100
+  
+  const sourceLabel = source === 'none' ? 'NONE' : source === 'tank' ? 'TANK-TO-PUMP' : 'HYDRANT'
+  const sourceBg = source === 'none' ? 'bg-white/10 text-white/60' : 'bg-sky-500 text-white'
 
   return (
     <div className="bg-[#1a1d23] border-b border-white/10 px-6 py-3">
@@ -35,12 +37,8 @@ export function StatusBar({ onOpenSettings }: StatusBarProps) {
             PUMP {pumpEngaged ? 'ENGAGED' : 'OFF'}
           </div>
           
-          <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
-            source === 'tank' 
-              ? 'bg-sky-500 text-white' 
-              : 'bg-sky-500 text-white'
-          }`}>
-            {source === 'tank' ? 'TANK' : 'HYDRANT'}
+          <div className={`px-3 py-1 rounded-full text-sm font-semibold ${sourceBg}`}>
+            {sourceLabel}
           </div>
         </div>
 
@@ -105,9 +103,9 @@ export function StatusBar({ onOpenSettings }: StatusBarProps) {
           {/* Warnings */}
           <button className="relative p-2 hover:bg-white/10 rounded-lg transition-all">
             <Bell size={20} />
-            {warnings > 0 && (
+            {warnings.length > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {warnings}
+                {warnings.length}
               </span>
             )}
           </button>
