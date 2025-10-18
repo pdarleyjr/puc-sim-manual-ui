@@ -86,7 +86,7 @@ export function StatusBar({ onOpenSettings }: StatusBarProps) {
                 style={{ width: `${waterPct}%` }}
               />
             </div>
-            <span className="text-xs tabular-nums">{waterGal}g</span>
+            <span className="text-xs tabular-nums">{Math.round(waterGal)}g</span>
           </div>
 
           {/* Foam Level (if enabled) */}
@@ -98,7 +98,7 @@ export function StatusBar({ onOpenSettings }: StatusBarProps) {
                   style={{ width: `${foamPct}%` }}
                 />
               </div>
-              <span className="text-xs tabular-nums">{foamGal}g</span>
+              <span className="text-xs tabular-nums">{Math.round(foamGal)}g</span>
             </div>
           )}
 

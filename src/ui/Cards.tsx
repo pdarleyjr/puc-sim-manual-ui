@@ -173,7 +173,7 @@ export function LevelsCard() {
       <div className="mb-4">
         <div className="flex justify-between text-xs mb-1">
           <span className="text-sky-400">Water</span>
-          <span className="tabular-nums">{waterGal} / {waterCap} gal</span>
+          <span className="tabular-nums">{Math.round(waterGal)} / {waterCap} gal</span>
         </div>
         <div className="h-6 bg-white/10 rounded-full overflow-hidden">
           <div 
@@ -188,7 +188,7 @@ export function LevelsCard() {
         <div>
           <div className="flex justify-between text-xs mb-1">
             <span className="text-pink-400">Foam</span>
-            <span className="tabular-nums">{foamGal} / {foamCap} gal</span>
+            <span className="tabular-nums">{Math.round(foamGal)} / {foamCap} gal</span>
           </div>
           <div className="h-6 bg-white/10 rounded-full overflow-hidden">
             <div 
