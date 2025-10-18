@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-main: #0F1216;
+    --text-primary: #FFFFFF;
+    --accent-emerald: #10B981;
+    --accent-red: #EF4444;
+    --accent-water: #38BDF8;
+    --accent-foam: #FB7185;
+  }
+
+  body {
+    @apply bg-[#0F1216] text-white font-sans antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+
+  * {
+    @apply tabular-nums;
+  }
+}
+
+@layer components {
+  .puc-card {
+    @apply rounded-2xl border border-white/10 bg-white/5 shadow-xl p-4;
+  }
+
+  .puc-button {
+    @apply px-4 py-2 rounded-lg font-semibold transition-all duration-200;
+  }
+
+  .puc-gauge-label {
+    @apply text-[10px] tracking-wider opacity-80 uppercase;
+  }
+
+  .puc-digital-readout {
+    @apply font-bold tabular-nums;
+  }
+}
