@@ -3,7 +3,7 @@ import { useStore } from '../state/store'
 import { StatusBar } from './StatusBar'
 import { SettingsModal } from './SettingsModal'
 import { AnalogGauge } from './Gauges'
-import { DischargeCard, IntakeCard, LevelsCard, InfoCard } from './Cards'
+import { DischargeCard, IntakeCard, LevelsCard, PumpDataCard } from './Cards'
 import { useEngineAudio } from '../audio/useEngineAudio'
 
 export function Panel() {
@@ -14,7 +14,9 @@ export function Panel() {
   const discharges = useStore(state => state.discharges)
   const gauges = useStore(state => state.gauges)
   const engagePump = useStore(state => state.engagePump)
+  const disengagePump = useStore(state => state.disengagePump)
   const tickRpm = useStore(state => state.tickRpm)
+  const simTick = useStore(state => state.simTick)
 
   // Engine audio hook
   useEngineAudio()
@@ -26,6 +28,23 @@ export function Panel() {
     }, 100)
     return () => clearInterval(interval)
   }, [tickRpm])
+
+  // Simulation tick interval (10 Hz)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      simTick()
+    }, 100)
+    return () => clearInterval(interval)
+  }, [simTick])
+
+  // Reset counters on window unload
+  useEffect(() => {
+    const handleUnload = () => {
+      disengagePump()
+    }
+    window.addEventListener('beforeunload', handleUnload)
+    return () => window.removeEventListener('beforeunload', handleUnload)
+  }, [disengagePump])
 
   const handleEngageWater = () => {
     engagePump('water')
@@ -161,7 +180,7 @@ export function Panel() {
             <div className="col-span-2 space-y-4">
               <IntakeCard />
               <LevelsCard />
-              <InfoCard />
+              <PumpDataCard />
             </div>
           </div>
         )}

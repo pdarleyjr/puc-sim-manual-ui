@@ -25,6 +25,18 @@ export function DischargeCard({ discharge }: DischargeCardProps) {
       {/* Gauge */}
       <LineAnalogGauge label={discharge.label} psi={displayPsi} />
       
+      {/* Flow Stats */}
+      <div className="mt-3 space-y-1 text-center text-sm">
+        <div className="flex justify-between items-center px-4">
+          <span className="text-xs opacity-60">GPM Now:</span>
+          <span className="font-bold tabular-nums text-emerald-400">{Math.round(discharge.gpmNow)}</span>
+        </div>
+        <div className="flex justify-between items-center px-4">
+          <span className="text-xs opacity-60">Gallons (this engagement):</span>
+          <span className="font-bold tabular-nums">{discharge.gallonsThisEng.toFixed(1)}</span>
+        </div>
+      </div>
+      
       {/* Open/Closed Toggle */}
       <div className="mt-4 flex items-center justify-center gap-2">
         <button
@@ -186,6 +198,34 @@ export function LevelsCard() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+export function PumpDataCard() {
+  const totals = useStore(state => state.totals)
+  
+  return (
+    <div className="puc-card">
+      <h3 className="text-sm font-semibold mb-3 text-center opacity-80">PUMP DATA</h3>
+      <div className="space-y-3">
+        <div>
+          <div className="text-xs opacity-60 text-center mb-1">TOTAL GPM Now</div>
+          <div className="text-2xl font-bold text-center tabular-nums text-emerald-400">
+            {Math.round(totals.gpmTotalNow)}
+          </div>
+        </div>
+        <div>
+          <div className="text-xs opacity-60 text-center mb-1">TOTAL Gallons (this engagement)</div>
+          <div className="text-xl font-bold text-center tabular-nums">
+            {totals.gallonsPumpThisEng.toFixed(1)}
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 text-xs text-center opacity-60">
+        <p>Pierce PUC</p>
+        <p>Manual Mode</p>
+      </div>
     </div>
   )
 }
