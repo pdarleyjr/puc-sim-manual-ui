@@ -1,4 +1,3 @@
-import React from 'react'
 import { LineAnalogGauge } from './Gauges'
 import type { Discharge } from '../state/store'
 import { useStore } from '../state/store'

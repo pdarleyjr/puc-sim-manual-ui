@@ -1,5 +1,3 @@
-import React from 'react'
-
 interface AnalogGaugeProps {
   label: string
   value: number

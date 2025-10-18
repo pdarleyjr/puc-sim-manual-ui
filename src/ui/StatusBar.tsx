@@ -1,4 +1,3 @@
-import React from 'react'
 import { Bell, Settings } from 'lucide-react'
 import { useStore } from '../state/store'
 

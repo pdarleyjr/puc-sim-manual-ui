@@ -1,4 +1,3 @@
-import React from 'react'
 import { X, Volume2, VolumeX } from 'lucide-react'
 import { useStore } from '../state/store'
 
