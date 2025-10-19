@@ -5,7 +5,7 @@ import { StatusBar } from './StatusBar'
 import { SettingsModal } from './SettingsModal'
 import { AfterActionModal } from './AfterActionModal'
 import { AnalogGauge } from './Gauges'
-import { DischargeCard, IntakeCard, LevelsCard, PumpDataCard, GovernorCard, TwoHalfMultiplexer } from './Cards'
+import { DischargeCard, IntakeCard, LevelsCard, PumpDataCard, GovernorCard, TwoHalfMultiplexer, DeckGunCard } from './Cards'
 import { useEngineAudio } from '../audio/useEngineAudio'
 
 function WarningBanner() {
@@ -212,6 +212,7 @@ export function Panel() {
                   <DischargeCard discharge={discharges.xlay3} />
                   <DischargeCard discharge={discharges.trashline} />
                   <TwoHalfMultiplexer />
+                  <DeckGunCard />
                 </div>
               </div>
             </section>

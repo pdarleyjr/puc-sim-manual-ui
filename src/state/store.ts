@@ -19,7 +19,7 @@ import {
 } from './constants'
 
 export type Source = 'none' | 'tank' | 'hydrant'
-export type DischargeId = 'xlay1' | 'xlay2' | 'xlay3' | 'trashline' | 'twohalfA' | 'twohalfB' | 'twohalfC' | 'twohalfD'
+export type DischargeId = 'xlay1' | 'xlay2' | 'xlay3' | 'trashline' | 'twohalfA' | 'twohalfB' | 'twohalfC' | 'twohalfD' | 'deckgun'
 export type GovernorMode = 'pressure' | 'rpm'
 
 // Assignment types
@@ -366,6 +366,17 @@ export const useStore = create<AppState>((set, get) => ({
       foamCapable: true, 
       lengthFt: LEN_TWOHALF_A, 
       assignment: { type: 'handline_175_fog' },
+      gpmNow: 0, 
+      gallonsThisEng: 0 
+    },
+    deckgun: { 
+      id: 'deckgun', 
+      label: 'DECK GUN', 
+      open: false, 
+      valvePercent: 0, 
+      foamCapable: false, 
+      lengthFt: 0, // Piped, no hose
+      assignment: { type: 'deck_gun', tip: '1_1/2' },
       gpmNow: 0, 
       gallonsThisEng: 0 
     },

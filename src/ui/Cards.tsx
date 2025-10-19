@@ -11,6 +11,12 @@ interface AssignmentSelectorProps {
 function AssignmentSelector({ discharge }: AssignmentSelectorProps) {
   const setLine = useStore(state => state.setLine)
   const is2Half = discharge.id.startsWith('twohalf')
+  const isCrosslay = discharge.id.startsWith('xlay') || discharge.id === 'trashline'
+  
+  // Crosslays are locked to handline_175_fog - no dropdown
+  if (isCrosslay) {
+    return null
+  }
   
   const assignmentOptions: { value: AssignmentConfig['type']; label: string; requires2Half: boolean }[] = [
     { value: 'handline_175_fog', label: 'Handline (1¾" Fog 175 @ 75)', requires2Half: false },
@@ -18,7 +24,6 @@ function AssignmentSelector({ discharge }: AssignmentSelectorProps) {
     { value: 'skid_leader', label: 'Skid Load (Leader Line)', requires2Half: true },
     { value: 'blitzfire', label: 'Portable Monitor: Blitzfire', requires2Half: true },
     { value: 'portable_standpipe', label: 'Portable Standpipe', requires2Half: true },
-    { value: 'deck_gun', label: 'Deck Gun (Master Stream)', requires2Half: true },
   ]
   
   const handleAssignmentChange = (type: AssignmentConfig['type']) => {
@@ -43,9 +48,8 @@ function AssignmentSelector({ discharge }: AssignmentSelectorProps) {
       case 'portable_standpipe':
         newAssignment = { type: 'portable_standpipe', floors: 5, len3inFt: 100 }
         break
-      case 'deck_gun':
-        newAssignment = { type: 'deck_gun', tip: '1_1/2' }
-        break
+      default:
+        return
     }
     setLine(discharge.id, { assignment: newAssignment })
   }
@@ -196,9 +200,77 @@ function AssignmentSelector({ discharge }: AssignmentSelectorProps) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// NEW: Deck Gun Card Component
+export function DeckGunCard() {
+  const discharge = useStore(state => state.discharges.deckgun)
+  const setLine = useStore(state => state.setLine)
+  const governor = useStore(state => state.governor)
+  const source = useStore(state => state.source)
+  const masterIntake = useStore(state => state.gauges.masterIntake)
+  const waterGal = useStore(state => state.gauges.waterGal)
+  
+  // Compute system pressure
+  const IDLE_PUMP_DELTA_PSI = 50
+  
+  const waterAvailable =
+    (source === 'hydrant' && masterIntake > 0) ||
+    (source === 'tank' && waterGal > 0)
+  
+  let P_system = 0
+  if (waterAvailable) {
+    const P_base = source === 'tank' 
+      ? IDLE_PUMP_DELTA_PSI 
+      : masterIntake + IDLE_PUMP_DELTA_PSI
+    P_system = P_base
+    if (governor.enabled) {
+      if (governor.mode === 'pressure') {
+        P_system = Math.min(400, Math.max(governor.setPsi, P_base))
+      }
+    }
+  }
+  
+  const displayPsi = discharge.open ? (discharge.valvePercent / 100) * P_system : 0
+
+  const handleToggle = () => {
+    setLine('deckgun', { open: !discharge.open })
+  }
+
+  const handleSetPercent = (percent: number) => {
+    setLine('deckgun', { valvePercent: Math.max(0, Math.min(100, percent)) })
+  }
+
+  const updateTip = (tip: '1_3/8' | '1_1/2' | '1_3/4') => {
+    if (discharge.assignment.type === 'deck_gun') {
+      setLine('deckgun', { assignment: { type: 'deck_gun', tip } })
+    }
+  }
+
+  const quicksets = [50, 75, 100]
+
+  return (
+    <div className="puc-card">
+      {/* Gauge */}
+      <LineAnalogGauge label={discharge.label} psi={displayPsi} />
       
+      {/* Flow Stats */}
+      <div className="mt-3 space-y-1 text-center text-sm">
+        <div className="flex justify-between items-center px-4">
+          <span className="text-xs opacity-60">GPM Now:</span>
+          <span className="font-bold tabular-nums text-emerald-400">{Math.round(discharge.gpmNow)}</span>
+        </div>
+        <div className="flex justify-between items-center px-4">
+          <span className="text-xs opacity-60">Gallons (this engagement):</span>
+          <span className="font-bold tabular-nums">{discharge.gallonsThisEng.toFixed(1)}</span>
+        </div>
+      </div>
+      
+      {/* Tip Selector */}
       {discharge.assignment.type === 'deck_gun' && (
-        <div className="bg-black/20 rounded-lg p-3 space-y-2">
+        <div className="mt-3 bg-black/20 rounded-lg p-3 space-y-2">
           <label className="text-xs opacity-60">Tip Size (Smooth Bore)</label>
           <div className="flex gap-2">
             {[
@@ -208,7 +280,7 @@ function AssignmentSelector({ discharge }: AssignmentSelectorProps) {
             ].map(tip => (
               <button
                 key={tip.value}
-                onClick={() => updateConfig({ tip: tip.value })}
+                onClick={() => updateTip(tip.value)}
                 className={`flex-1 px-3 py-2 rounded font-semibold transition-all ${
                   discharge.assignment.type === 'deck_gun' && discharge.assignment.tip === tip.value
                     ? 'bg-emerald-500 text-white'
@@ -224,6 +296,50 @@ function AssignmentSelector({ discharge }: AssignmentSelectorProps) {
           </div>
         </div>
       )}
+      
+      {/* Open/Closed Toggle */}
+      <div className="mt-4 flex items-center justify-center gap-2">
+        <button
+          onClick={handleToggle}
+          className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+            discharge.open 
+              ? 'bg-emerald-500 text-white' 
+              : 'bg-white/10 text-white/60 hover:bg-white/20'
+          }`}
+        >
+          {discharge.open ? 'OPEN' : 'CLOSED'}
+        </button>
+      </div>
+      
+      {/* Valve % Open Slider */}
+      <div className="mt-3">
+        <label className="text-xs opacity-60">Valve % Open</label>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="5"
+          value={discharge.valvePercent}
+          onChange={(e) => handleSetPercent(Number(e.target.value))}
+          className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500"
+        />
+        <div className="text-center text-lg font-bold tabular-nums mt-1">
+          {discharge.valvePercent}%
+        </div>
+      </div>
+      
+      {/* Quickset buttons */}
+      <div className="mt-2 flex gap-2 justify-center">
+        {quicksets.map(pct => (
+          <button
+            key={pct}
+            onClick={() => handleSetPercent(pct)}
+            className="px-3 py-1 text-xs rounded bg-white/10 hover:bg-white/20 transition-all"
+          >
+            {pct}%
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
