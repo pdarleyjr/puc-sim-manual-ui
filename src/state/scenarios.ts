@@ -13,7 +13,7 @@ export interface ScenarioStep {
 }
 
 // Watcher function that runs each tick
-export type WatcherFn = (state: AppState, elapsed: number) => void
+export type WatcherFn = (state: AppState, _elapsed: number) => void
 
 // Build Scenario A: Single-story residential (one crosslay)
 export function buildScenarioA(opts: { xlay: DischargeId; unit: string }, actions: {
@@ -72,32 +72,32 @@ export function buildScenarioA(opts: { xlay: DischargeId; unit: string }, action
   let firstWaterCallTime: number | null = null
   let secondWaterCallTime: number | null = null
   
-  watchers.push((state, elapsed) => {
+  watchers.push((state, _elapsed) => {
     // Track when "charge the line" inject fires
-    if (elapsed >= jitter(20_000, 0.2) && chargeLineTime === null) {
-      chargeLineTime = elapsed
+    if (_elapsed >= jitter(20_000, 0.2) && chargeLineTime === null) {
+      chargeLineTime = _elapsed
     }
     
     if (chargeLineTime === null) return
     
     const discharge = state.discharges[opts.xlay]
     const hasFlow = discharge.open && discharge.gpmNow > 10
-    const sinceCharge = elapsed - chargeLineTime
+    const sinceCharge = _elapsed - chargeLineTime
     
     // First water call after 5s
     if (sinceCharge > 5000 && !hasFlow && firstWaterCallTime === null) {
-      firstWaterCallTime = elapsed
+      firstWaterCallTime = _elapsed
       actions.log('Crew: WATER!')
     }
     
     // Second water call after another 5s
-    if (firstWaterCallTime !== null && elapsed - firstWaterCallTime > 5000 && !hasFlow && secondWaterCallTime === null) {
-      secondWaterCallTime = elapsed
+    if (firstWaterCallTime !== null && _elapsed - firstWaterCallTime > 5000 && !hasFlow && secondWaterCallTime === null) {
+      secondWaterCallTime = _elapsed
       actions.log('Crew: WATER! WATER!')
     }
     
     // FAIL if still no water after second call
-    if (secondWaterCallTime !== null && elapsed - secondWaterCallTime > 1000 && !hasFlow) {
+    if (secondWaterCallTime !== null && _elapsed - secondWaterCallTime > 1000 && !hasFlow) {
       actions.fail('Crew backing out — No water.')
     }
   })
@@ -106,7 +106,7 @@ export function buildScenarioA(opts: { xlay: DischargeId; unit: string }, action
   let gpmWarningTime: number | null = null
   let gpmFailTime: number | null = null
   
-  watchers.push((state, elapsed) => {
+  watchers.push((state, _elapsed) => {
     if (state.scenario.status !== 'running') return
     
     const discharge = state.discharges[opts.xlay]
@@ -122,18 +122,18 @@ export function buildScenarioA(opts: { xlay: DischargeId; unit: string }, action
     
     if (gpm < 160) {
       if (gpmWarningTime === null) {
-        gpmWarningTime = elapsed
+        gpmWarningTime = _elapsed
         actions.log('Crew: Increase pressure!')
-      } else if (elapsed - gpmWarningTime > 5000 && gpmFailTime === null) {
-        gpmFailTime = elapsed
+      } else if (_elapsed - gpmWarningTime > 5000 && gpmFailTime === null) {
+        gpmFailTime = _elapsed
         actions.fail('Insufficient pressure — Fire advancing.')
       }
     } else if (gpm > 180) {
       if (gpmWarningTime === null) {
-        gpmWarningTime = elapsed
+        gpmWarningTime = _elapsed
         actions.log('Crew: Back down pressure!')
-      } else if (elapsed - gpmWarningTime > 5000 && gpmFailTime === null) {
-        gpmFailTime = elapsed
+      } else if (_elapsed - gpmWarningTime > 5000 && gpmFailTime === null) {
+        gpmFailTime = _elapsed
         actions.fail('Over-pressure — Hose burst / crew injury.')
       }
     } else {
@@ -144,7 +144,8 @@ export function buildScenarioA(opts: { xlay: DischargeId; unit: string }, action
   })
   
   // Tank depletion watcher
-  watchers.push((state, elapsed) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  watchers.push((state, _elapsed) => {
     if (state.scenario.status !== 'running') return
     if (state.source === 'hydrant') return
     
@@ -159,7 +160,7 @@ export function buildScenarioA(opts: { xlay: DischargeId; unit: string }, action
   // PASS watcher: crosslay 160-180 GPM + hydrant + sustained 20-30s
   let goodFlowStart: number | null = null
   
-  watchers.push((state, elapsed) => {
+  watchers.push((state, _elapsed) => {
     if (state.scenario.status !== 'running') return
     if (state.source !== 'hydrant') {
       goodFlowStart = null
@@ -172,9 +173,9 @@ export function buildScenarioA(opts: { xlay: DischargeId; unit: string }, action
     
     if (inRange) {
       if (goodFlowStart === null) {
-        goodFlowStart = elapsed
+        goodFlowStart = _elapsed
       } else {
-        const sustained = elapsed - goodFlowStart
+        const sustained = _elapsed - goodFlowStart
         const targetDuration = 20000 + Math.random() * 10000 // 20-30s
         if (sustained > targetDuration) {
           actions.log('Fire knocked down. Good work.')
