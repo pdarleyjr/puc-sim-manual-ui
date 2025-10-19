@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { ChevronDown, ChevronUp, Clock, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { ChevronDown, ChevronUp, Clock, AlertTriangle, CheckCircle, XCircle, Bell } from 'lucide-react'
 import { useStore } from '../state/store'
 import type { ScenarioId } from '../state/store'
 
@@ -13,6 +13,9 @@ function formatTime(ms: number): string {
 export function ScenarioHud() {
   const [expanded, setExpanded] = useState(true)
   const [selectedScenario, setSelectedScenario] = useState<ScenarioId>('residential_one_xlay')
+  const [lastSeenCount, setLastSeenCount] = useState(0)
+  const feedEndRef = useRef<HTMLDivElement>(null)
+  const feedContainerRef = useRef<HTMLDivElement>(null)
   
   const scenario = useStore(state => state.scenario)
   const scenarioStart = useStore(state => state.scenarioStart)
@@ -26,6 +29,24 @@ export function ScenarioHud() {
   
   // Calculate elapsed time
   const elapsed = scenario.clock ? scenario.clock.now - scenario.clock.t0 : 0
+  
+  // Track new updates
+  const hasNewUpdates = scenario.eventFeed.length > lastSeenCount && !expanded
+  
+  // Auto-scroll to show latest 2-3 entries when new events arrive
+  useEffect(() => {
+    if (expanded && scenario.eventFeed.length > 0 && feedEndRef.current) {
+      // Smooth scroll to bottom to show latest entries
+      feedEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    }
+  }, [scenario.eventFeed.length, expanded])
+  
+  // Mark updates as seen when expanded
+  useEffect(() => {
+    if (expanded) {
+      setLastSeenCount(scenario.eventFeed.length)
+    }
+  }, [expanded, scenario.eventFeed.length])
   
   // Status badge colors
   const statusColors = {
@@ -116,8 +137,8 @@ export function ScenarioHud() {
           {/* Right: Indicators */}
           <div className="flex-1 flex items-center justify-end gap-3">
             {scenario.locks.hydrantCountdownMs !== null && (
-              <div className="px-3 py-1 bg-sky-500/20 border border-sky-500/50 rounded-lg text-sm font-semibold flex items-center gap-2">
-                <span>Hydrant ETA:</span>
+              <div className="px-3 py-1 bg-sky-500/20 border border-sky-500/50 rounded-lg text-sm font-semibold flex items-center gap-2 animate-pulse">
+                <span>Water Supply ETA:</span>
                 <span className="font-mono tabular-nums">{Math.ceil(scenario.locks.hydrantCountdownMs / 1000)}s</span>
               </div>
             )}
@@ -136,10 +157,18 @@ export function ScenarioHud() {
             
             <button
               onClick={() => setExpanded(!expanded)}
-              className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all"
+              className="relative p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all"
               aria-label="Toggle event feed"
             >
               {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              {hasNewUpdates && (
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 items-center justify-center">
+                    <Bell size={8} className="text-white" />
+                  </span>
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -147,7 +176,10 @@ export function ScenarioHud() {
       
       {/* Expandable Event Feed */}
       {expanded && scenario.eventFeed.length > 0 && (
-        <div className="px-4 pb-3 max-h-48 overflow-y-auto border-t border-white/5">
+        <div 
+          ref={feedContainerRef}
+          className="px-4 pb-3 max-h-48 overflow-y-auto border-t border-white/5 scroll-smooth"
+        >
           <div className="space-y-1 pt-2">
             {scenario.eventFeed.map((event, idx) => (
               <div key={idx} className="text-sm flex gap-3 px-2 py-1 rounded hover:bg-white/5">
@@ -157,6 +189,7 @@ export function ScenarioHud() {
                 <span className="text-white/90">{event.text}</span>
               </div>
             ))}
+            <div ref={feedEndRef} />
           </div>
         </div>
       )}

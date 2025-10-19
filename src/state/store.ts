@@ -936,7 +936,7 @@ export const useStore = create<AppState>((set, get) => ({
         locks: { ...state.scenario.locks, hydrantCountdownMs: 30000 },
       }
     })
-    get().scenarioLog('Hydrant crew dispatched. ETA 30s.')
+    get().scenarioLog('Hydrant crew dispatched. Water supply will be established in 30 seconds.')
   },
 
   scenarioTick: (dt) => {
