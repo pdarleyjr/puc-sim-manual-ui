@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useStore } from '../state/store'
 import { StatusBar } from './StatusBar'
@@ -8,6 +8,7 @@ import { AnalogGauge } from './Gauges'
 import { DischargeCard, IntakeCard, LevelsCard, PumpDataCard, GovernorCard, TwoHalfMultiplexer, DeckGunCard } from './Cards'
 import { ScenarioHud } from './ScenarioHud'
 import { useEngineAudio } from '../audio/useEngineAudio'
+import { useState } from 'react'
 
 function WarningBanner() {
   const warnings = useStore(state => state.warnings)
@@ -39,20 +40,15 @@ function WarningBanner() {
 export function Panel() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [afterActionOpen, setAfterActionOpen] = useState(false)
-  const [scenarioModeEnabled, setScenarioModeEnabled] = useState(false)
-  const [selectedScenario, setSelectedScenario] = useState<'residential_one_xlay' | 'residential_with_exposure'>('residential_one_xlay')
   
   const pumpEngaged = useStore(state => state.pumpEngaged)
-  const foamEnabled = useStore(state => state.foamEnabled)
   const discharges = useStore(state => state.discharges)
   const gauges = useStore(state => state.gauges)
   const compactMode = useStore(state => state.uiPrefs.compactMode)
-  const engagePump = useStore(state => state.engagePump)
   const disengagePump = useStore(state => state.disengagePump)
   const tickRpm = useStore(state => state.tickRpm)
   const simTick = useStore(state => state.simTick)
   const scenario = useStore(state => state.scenario)
-  const scenarioStart = useStore(state => state.scenarioStart)
 
   // Engine audio hook
   useEngineAudio()
@@ -82,28 +78,6 @@ export function Panel() {
     return () => window.removeEventListener('beforeunload', handleUnload)
   }, [disengagePump])
 
-  const handleEngageWater = () => {
-    engagePump('water')
-    // If scenario mode is enabled, start the scenario
-    if (scenarioModeEnabled) {
-      // Small delay to ensure pump is fully engaged
-      setTimeout(() => {
-        scenarioStart(selectedScenario)
-      }, 100)
-    }
-  }
-
-  const handleEngageFoam = () => {
-    engagePump('foam')
-    // If scenario mode is enabled, start the scenario
-    if (scenarioModeEnabled) {
-      // Small delay to ensure pump is fully engaged
-      setTimeout(() => {
-        scenarioStart(selectedScenario)
-      }, 100)
-    }
-  }
-
   // Check if in scenario mode
   const isScenarioMode = scenario.status !== 'idle'
 
@@ -124,7 +98,7 @@ export function Panel() {
       {/* Main Content */}
       <div className="flex-1 p-3 sm:p-6">
         {!pumpEngaged ? (
-          /* Engage Screen */
+          /* Engage Screen - now simplified since launcher handles mode selection */
           <div className="flex items-center justify-center h-full">
             <div id="engage-card" className="puc-card max-w-md w-full text-center p-8">
               <h2 className="text-2xl font-bold mb-6">ENGAGE PUMP</h2>
@@ -132,47 +106,16 @@ export function Panel() {
                 Select pump mode to begin manual operation
               </p>
               
-              {/* Scenario Mode Toggle */}
-              <div className="mb-6 p-4 bg-white/5 rounded-lg">
-                <label className="flex items-center justify-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={scenarioModeEnabled}
-                    onChange={(e) => setScenarioModeEnabled(e.target.checked)}
-                    className="w-5 h-5 rounded bg-white/10 border-white/20 checked:bg-emerald-500"
-                  />
-                  <span className="font-semibold">Scenario Mode</span>
-                </label>
-                
-                {scenarioModeEnabled && (
-                  <div className="mt-4">
-                    <label className="text-xs opacity-60 block mb-2">Select Scenario</label>
-                    <select
-                      value={selectedScenario}
-                      onChange={(e) => setSelectedScenario(e.target.value as typeof selectedScenario)}
-                      className="w-full px-3 py-2 bg-white/10 rounded-lg text-sm border border-white/20 focus:border-emerald-500 focus:outline-none"
-                    >
-                      <option value="residential_one_xlay" className="bg-gray-900">
-                        Single-story residential (one crosslay)
-                      </option>
-                      <option value="residential_with_exposure" className="bg-gray-900">
-                        Single-story residential with exposure
-                      </option>
-                    </select>
-                  </div>
-                )}
-              </div>
-              
               <div className="space-y-4">
                 <button
-                  onClick={handleEngageWater}
+                  onClick={() => useStore.getState().engagePump('water')}
                   className="w-full px-6 py-4 bg-sky-500 hover:bg-sky-600 rounded-lg font-bold text-lg transition-all"
                 >
                   Water Pump
                 </button>
                 
                 <button
-                  onClick={handleEngageFoam}
+                  onClick={() => useStore.getState().engagePump('foam')}
                   className="w-full px-6 py-4 bg-pink-500 hover:bg-pink-600 rounded-lg font-bold text-lg transition-all"
                 >
                   Foam System
@@ -214,11 +157,11 @@ export function Panel() {
                   </div>
 
                   <div className={`p-3 rounded-lg text-center ${
-                    foamEnabled ? 'bg-pink-500/20 border border-pink-500/50' : 'bg-white/5'
+                    useStore.getState().foamEnabled ? 'bg-pink-500/20 border border-pink-500/50' : 'bg-white/5'
                   }`}>
                     <div className="text-xs opacity-60">Foam System</div>
                     <div className="font-bold text-sm">
-                      {foamEnabled ? 'ACTIVE' : 'OFF'}
+                      {useStore.getState().foamEnabled ? 'ACTIVE' : 'OFF'}
                     </div>
                   </div>
                 </div>

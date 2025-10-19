@@ -1,5 +1,6 @@
-import { Bell, Settings, FileText } from 'lucide-react'
+import { Bell, Settings, FileText, GraduationCap } from 'lucide-react'
 import { useStore } from '../state/store'
+import { startOverviewTour, startLineConfigTour } from './tutorial/Tour'
 
 export function StatusBar({ onOpenSettings, onOpenAfterAction }: {
   onOpenSettings: () => void
@@ -17,6 +18,23 @@ export function StatusBar({ onOpenSettings, onOpenAfterAction }: {
   const setSoundOn = useStore(state => state.setSoundOn)
   const warnings = useStore(state => state.warnings)
   const disengagePump = useStore(state => state.disengagePump)
+
+  const handleTutorialClick = () => {
+    // Only show tutorial when pump is engaged
+    if (!pumpEngaged) {
+      alert('Engage the pump first to start the tutorial.')
+      return
+    }
+    
+    const tour = startOverviewTour()
+    tour.on('complete', () => {
+      // Prompt for line config tour
+      const wantsLineConfig = confirm('Would you like to learn about line configurations and 2½" evolutions?')
+      if (wantsLineConfig) {
+        startLineConfigTour()
+      }
+    })
+  }
 
   return (
     <div className="bg-gray-900 border-b border-white/10 px-4 py-2 sticky top-0 z-50">
@@ -108,6 +126,16 @@ export function StatusBar({ onOpenSettings, onOpenAfterAction }: {
               </span>
             </button>
           )}
+          
+          {/* Tutorial */}
+          <button
+            onClick={handleTutorialClick}
+            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all"
+            aria-label="Tutorial"
+            title="Tutorial"
+          >
+            <GraduationCap size={16} />
+          </button>
           
           {/* Sound Toggle */}
           <button
