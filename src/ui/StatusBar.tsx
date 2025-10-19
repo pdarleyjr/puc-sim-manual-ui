@@ -89,12 +89,12 @@ export function StatusBar({ onOpenSettings, onOpenAfterAction }: StatusBarProps)
               </div>
               <div className="text-xs opacity-60">PSI</div>
               {residualBadge && (
-                <div className={`absolute -top-1 -right-8 px-2 py-0.5 rounded text-[10px] font-bold ${
+                <div className={`absolute -bottom-6 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${
                   residualBadge === 'green' ? 'bg-emerald-500 text-white' :
                   residualBadge === 'amber' ? 'bg-amber-500 text-black' :
                   'bg-red-500 text-white'
                 }`}>
-                  RES
+                  RES ≥20
                 </div>
               )}
             </div>
