@@ -28,3 +28,20 @@ export const BLITZFIRE_MAX_PSI = 175;
 
 // Smooth bore tip diameter (inches)
 export const SMOOTHBORE_TIP_DIAMETER = 0.875; // 7/8″
+
+// Master Stream / Deck Gun (piped, no supply hose)
+export const NP_MASTER = 80;                    // psi (master stream smooth bore standard)
+export const K_MONITOR = 25 / (1200 * 1200);   // ≈1.736e-5 psi/(gpm^2) - device loss @ 1200 gpm
+export const K_PIPED = 12 / (1000 * 1000);     // =1.2e-5 psi/(gpm^2) - waterway loss @ 1000 gpm
+
+// Deck gun tip diameters (inches)
+export const TIP_DIAMETERS = {
+  '1_3/8': 1.375,
+  '1_1/2': 1.5,
+  '1_3/4': 1.75,
+} as const;
+
+// Cavitation thresholds
+export const CAVITATION_INTAKE_THRESHOLD = 2;   // psi - near-dry threshold
+export const CAVITATION_RPM_THRESHOLD = 1200;   // rpm - high demand threshold
+export const CAVITATION_DISCHARGE_THRESHOLD = 150; // psi - high demand threshold

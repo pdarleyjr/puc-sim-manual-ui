@@ -18,6 +18,7 @@ function AssignmentSelector({ discharge }: AssignmentSelectorProps) {
     { value: 'skid_leader', label: 'Skid Load (Leader Line)', requires2Half: true },
     { value: 'blitzfire', label: 'Portable Monitor: Blitzfire', requires2Half: true },
     { value: 'portable_standpipe', label: 'Portable Standpipe', requires2Half: true },
+    { value: 'deck_gun', label: 'Deck Gun (Master Stream)', requires2Half: true },
   ]
   
   const handleAssignmentChange = (type: AssignmentConfig['type']) => {
@@ -41,6 +42,9 @@ function AssignmentSelector({ discharge }: AssignmentSelectorProps) {
         break
       case 'portable_standpipe':
         newAssignment = { type: 'portable_standpipe', floors: 5, len3inFt: 100 }
+        break
+      case 'deck_gun':
+        newAssignment = { type: 'deck_gun', tip: '1_1/2' }
         break
     }
     setLine(discharge.id, { assignment: newAssignment })
@@ -189,6 +193,34 @@ function AssignmentSelector({ discharge }: AssignmentSelectorProps) {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+      
+      {discharge.assignment.type === 'deck_gun' && (
+        <div className="bg-black/20 rounded-lg p-3 space-y-2">
+          <label className="text-xs opacity-60">Tip Size (Smooth Bore)</label>
+          <div className="flex gap-2">
+            {[
+              { value: '1_3/8' as const, label: '1⅜″' },
+              { value: '1_1/2' as const, label: '1½″' },
+              { value: '1_3/4' as const, label: '1¾″' },
+            ].map(tip => (
+              <button
+                key={tip.value}
+                onClick={() => updateConfig({ tip: tip.value })}
+                className={`flex-1 px-3 py-2 rounded font-semibold transition-all ${
+                  discharge.assignment.type === 'deck_gun' && discharge.assignment.tip === tip.value
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-white/10 hover:bg-white/20'
+                }`}
+              >
+                {tip.label}
+              </button>
+            ))}
+          </div>
+          <div className="text-xs opacity-60 text-center mt-2">
+            Piped master stream (no supply hose)
           </div>
         </div>
       )}

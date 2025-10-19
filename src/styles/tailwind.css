@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @layer base {
   :root {
     --bg-main: #0F1216;
@@ -36,4 +40,18 @@
   .puc-digital-readout {
     @apply font-bold tabular-nums;
   }
+}
+
+/* Redline pulse animation */
+@keyframes pulseRedline {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 16px rgba(239, 68, 68, 0);
+  }
+}
+
+.redline-pulse {
+  animation: pulseRedline 1s ease-out;
 }

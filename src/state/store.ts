@@ -12,6 +12,10 @@ import {
   PSI_PER_FOOT,
   HRP_LENGTH,
   HRP_TARGET_GPM,
+  NP_MASTER,
+  K_MONITOR,
+  K_PIPED,
+  TIP_DIAMETERS,
 } from './constants'
 
 export type Source = 'none' | 'tank' | 'hydrant'
@@ -19,7 +23,7 @@ export type DischargeId = 'xlay1' | 'xlay2' | 'xlay3' | 'trashline' | 'twohalfA'
 export type GovernorMode = 'pressure' | 'rpm'
 
 // Assignment types
-export type AssignmentType = 'handline_175_fog' | 'fdc_standpipe' | 'skid_leader' | 'blitzfire' | 'portable_standpipe'
+export type AssignmentType = 'handline_175_fog' | 'fdc_standpipe' | 'skid_leader' | 'blitzfire' | 'portable_standpipe' | 'deck_gun'
 
 export type AssignmentConfig =
   | { type: 'handline_175_fog' }
@@ -27,6 +31,26 @@ export type AssignmentConfig =
   | { type: 'skid_leader'; setbackFt: number }
   | { type: 'blitzfire'; mode: 'low55' | 'std100'; len3inFt: number }
   | { type: 'portable_standpipe'; floors: number; len3inFt: number }
+  | { type: 'deck_gun'; tip: '1_3/8' | '1_1/2' | '1_3/4' }
+
+// Event logging types
+export type LogEvent = {
+  ts: number
+  t: string
+  meta?: Record<string, unknown>
+}
+
+export type Session = {
+  active: boolean
+  startTs?: number
+  endTs?: number
+  events: LogEvent[]
+}
+
+// UI preferences
+export type UiPrefs = {
+  compactMode: boolean
+}
 
 // Hydraulics constants
 const HOSE_COEFF_C = 6.59                 // Key Combat Ready 1¾″
@@ -91,6 +115,9 @@ export interface AppState {
   targetRpm: number
   lastSimTick: number
   warnings: string[]
+  session: Session
+  uiPrefs: UiPrefs
+  lastRedlineCross: number  // timestamp of last redline crossing for edge detection
 
   // Actions
   engagePump: (mode: 'water' | 'foam') => void
@@ -106,6 +133,10 @@ export interface AppState {
   setSoundOn: (on: boolean) => void
   simTick: () => void
   ackWarning: (code: string) => void
+  log: (t: string, meta?: Record<string, unknown>) => void
+  startSession: () => void
+  endSession: () => void
+  setCompactMode: (on: boolean) => void
 }
 
 // Compute P_base (hydrant intake + idle pump contribution)
@@ -219,6 +250,22 @@ function computeAssignmentFlow(P_line_at_panel: number, assignment: AssignmentCo
       const B = NP_SMOOTHBORE_HAND + elevPsi + STANDPIPE_ALLOWANCE
       const Q = Math.sqrt(Math.max(0, (P_line_at_panel - B) / A_total))
       return Math.min(HRP_TARGET_GPM, Q)
+    }
+
+    case 'deck_gun': {
+      // Deck Gun (PIPED): no supply hose, only device + piping losses
+      const K_TOTAL = K_MONITOR + K_PIPED
+      const B = NP_MASTER  // 80 psi nozzle requirement
+      
+      // P = B + K_TOTAL * Q^2  →  Q = sqrt(max(0, (P - B) / K_TOTAL))
+      let Q = Math.sqrt(Math.max(0, (P_line_at_panel - B) / K_TOTAL))
+      
+      // Optional: tip "natural" flow at NP=80; allow slight headroom
+      const tipDiam = TIP_DIAMETERS[assignment.tip]
+      const Q_tip = 29.7 * (tipDiam ** 2) * Math.sqrt(NP_MASTER)
+      Q = Math.min(Q, 1250, Q_tip * 1.2)
+      
+      return Q
     }
   }
 }
@@ -340,6 +387,14 @@ export const useStore = create<AppState>((set, get) => ({
   targetRpm: ENGINE_IDLE,
   lastSimTick: 0,
   warnings: [],
+  session: {
+    active: false,
+    events: [],
+  },
+  uiPrefs: {
+    compactMode: false,
+  },
+  lastRedlineCross: 0,
 
   engagePump: (mode) => {
     set({
@@ -349,6 +404,8 @@ export const useStore = create<AppState>((set, get) => ({
       targetRpm: PUMP_BASE,
       lastSimTick: performance.now(),
     })
+    get().startSession()
+    get().log('PUMP_ENGAGED', { mode })
   },
 
   disengagePump: () => {
@@ -360,6 +417,9 @@ export const useStore = create<AppState>((set, get) => ({
         { ...d, gpmNow: 0, gallonsThisEng: 0 }
       ])
     ) as Record<DischargeId, Discharge>
+
+    get().log('PUMP_DISENGAGED')
+    get().endSession()
 
     set({
       pumpEngaged: false,
@@ -375,6 +435,9 @@ export const useStore = create<AppState>((set, get) => ({
     // Mutual exclusivity: clicking same source toggles to 'none'
     const newSource = state.source === s ? 'none' : s
     const newIntake = newSource === 'hydrant' && state.gauges.masterIntake === 0 ? 50 : state.gauges.masterIntake
+    
+    get().log('SOURCE_CHANGE', { from: state.source, to: newSource })
+    
     set({
       source: newSource,
       gauges: {
@@ -387,12 +450,15 @@ export const useStore = create<AppState>((set, get) => ({
 
   setIntakePsi: (psi) => {
     if (get().source === 'hydrant') {
-      set({ gauges: { ...get().gauges, masterIntake: Math.max(0, Math.min(200, psi)) } })
+      const clamped = Math.max(0, Math.min(200, psi))
+      get().log('HYDRANT_PSI_CHANGE', { psi: clamped })
+      set({ gauges: { ...get().gauges, masterIntake: clamped } })
       get().recomputeMasters()
     }
   },
 
   setGovernorMode: (mode) => {
+    get().log('GOVERNOR_MODE_CHANGE', { mode })
     set({
       governor: { ...get().governor, enabled: true, mode }
     })
@@ -400,20 +466,37 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setGovernorSetPsi: (psi) => {
+    const clamped = Math.max(50, Math.min(300, psi))
+    get().log('GOVERNOR_SETPOINT_CHANGE', { mode: 'pressure', psi: clamped })
     set({
-      governor: { ...get().governor, setPsi: Math.max(50, Math.min(300, psi)) }
+      governor: { ...get().governor, setPsi: clamped }
     })
     get().recomputeMasters()
   },
 
   setGovernorSetRpm: (rpm) => {
+    const clamped = Math.max(750, Math.min(2200, rpm))
+    get().log('GOVERNOR_SETPOINT_CHANGE', { mode: 'rpm', rpm: clamped })
     set({
-      governor: { ...get().governor, setRpm: Math.max(750, Math.min(2200, rpm)) }
+      governor: { ...get().governor, setRpm: clamped }
     })
     get().recomputeMasters()
   },
 
   setLine: (id, patch) => {
+    const oldState = get().discharges[id]
+    
+    // Log significant changes
+    if (patch.open !== undefined && patch.open !== oldState.open) {
+      get().log('DISCHARGE_VALVE', { line: id, open: patch.open })
+    }
+    if (patch.valvePercent !== undefined && patch.valvePercent !== oldState.valvePercent) {
+      get().log('DISCHARGE_VALVE_PCT', { line: id, percent: patch.valvePercent })
+    }
+    if (patch.assignment !== undefined && patch.assignment.type !== oldState.assignment.type) {
+      get().log('DISCHARGE_ASSIGNMENT', { line: id, assignment: patch.assignment.type })
+    }
+    
     set({
       discharges: {
         ...get().discharges,
@@ -431,12 +514,23 @@ export const useStore = create<AppState>((set, get) => ({
     const linePressures = Object.values(state.discharges).map(d => 
       d.open ? (d.valvePercent / 100) * P_system : 0
     )
-    const masterDischarge = Math.min(Math.max(...linePressures, 0), 400)
+    const newMasterDischarge = Math.min(Math.max(...linePressures, 0), 400)
+    
+    // Redline edge detection (rising edge only)
+    const oldMasterDischarge = state.gauges.masterDischarge
+    if (newMasterDischarge >= 350 && oldMasterDischarge < 350) {
+      const now = performance.now()
+      // Only log if it's been more than 2s since last crossing
+      if (now - state.lastRedlineCross > 2000) {
+        get().log('REDLINE_CROSSED', { psi: Math.round(newMasterDischarge) })
+        set({ lastRedlineCross: now })
+      }
+    }
     
     const newTargetRpm = computeTargetRpm(state)
     
     set({
-      gauges: { ...state.gauges, masterDischarge },
+      gauges: { ...state.gauges, masterDischarge: newMasterDischarge },
       targetRpm: newTargetRpm,
     })
   },
@@ -453,7 +547,59 @@ export const useStore = create<AppState>((set, get) => ({
   setSoundOn: (on) => set({ soundOn: on }),
 
   ackWarning: (code) => {
+    get().log('WARNING_CLEARED', { warning: code })
     set({ warnings: get().warnings.filter(w => w !== code) })
+  },
+
+  log: (t, meta) => {
+    const state = get()
+    if (!state.session.active) return
+    
+    const event: LogEvent = {
+      ts: performance.now(),
+      t,
+      meta,
+    }
+    
+    set({
+      session: {
+        ...state.session,
+        events: [...state.session.events, event],
+      }
+    })
+  },
+
+  startSession: () => {
+    set({
+      session: {
+        active: true,
+        startTs: performance.now(),
+        events: [{ ts: performance.now(), t: 'SESSION_START' }],
+      }
+    })
+  },
+
+  endSession: () => {
+    const state = get()
+    if (!state.session.active) return
+    
+    const endEvent: LogEvent = {
+      ts: performance.now(),
+      t: 'SESSION_END',
+    }
+    
+    set({
+      session: {
+        ...state.session,
+        active: false,
+        endTs: performance.now(),
+        events: [...state.session.events, endEvent],
+      }
+    })
+  },
+
+  setCompactMode: (on) => {
+    set({ uiPrefs: { ...get().uiPrefs, compactMode: on } })
   },
 
   simTick: () => {
@@ -501,6 +647,7 @@ export const useStore = create<AppState>((set, get) => ({
     let newWarnings = [...state.warnings]
     if (hot && !exists) {
       newWarnings.push(warningCode)
+      get().log('WARNING_RAISED', { warning: warningCode })
     }
     if (!hot && exists) {
       newWarnings = newWarnings.filter(w => w !== warningCode)

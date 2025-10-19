@@ -1,3 +1,7 @@
+import { useState, useEffect } from 'react'
+import { useStore } from '../state/store'
+import { selectCavitating } from '../state/selectors'
+
 interface AnalogGaugeProps {
   label: string
   value: number
@@ -7,11 +11,42 @@ interface AnalogGaugeProps {
   redline?: number
 }
 
+// Damping function for slew rate limiting
+function dampValue(current: number, target: number, maxStep: number = 12): number {
+  const delta = target - current
+  const step = Math.sign(delta) * Math.min(Math.abs(delta), maxStep)
+  return current + step
+}
+
 export function AnalogGauge({ label, value, min, max, unit = 'PSI', redline }: AnalogGaugeProps) {
+  const [displayValue, setDisplayValue] = useState(value)
+  const cavitating = useStore(selectCavitating)
+  
+  // Damping effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDisplayValue(prev => dampValue(prev, value, 12))
+    }, 50)
+    return () => clearInterval(interval)
+  }, [value])
+  
+  // Cavitation jitter (±2-4 degrees at 8-12 Hz)
+  const [jitter, setJitter] = useState(0)
+  useEffect(() => {
+    if (!cavitating) {
+      setJitter(0)
+      return
+    }
+    const interval = setInterval(() => {
+      setJitter((Math.random() - 0.5) * 6) // ±3 degrees
+    }, 100) // 10 Hz
+    return () => clearInterval(interval)
+  }, [cavitating])
+  
   const SWEEP = 240
   const START = -120
-  const pct = Math.max(0, Math.min(1, (value - min) / (max - min)))
-  const angle = START + pct * SWEEP
+  const pct = Math.max(0, Math.min(1, (displayValue - min) / (max - min)))
+  const angle = START + pct * SWEEP + jitter
 
   // Calculate redline arc if provided
   let redlineArc = null
@@ -54,7 +89,7 @@ export function AnalogGauge({ label, value, min, max, unit = 'PSI', redline }: A
       </svg>
       
       <div className="absolute -bottom-6 w-full text-center">
-        <div className="text-xl font-bold tabular-nums">{Math.round(value)}</div>
+        <div className="text-xl font-bold tabular-nums">{Math.round(displayValue)}</div>
         <div className="text-[10px] opacity-60">{unit}</div>
       </div>
       
@@ -73,10 +108,34 @@ interface LineAnalogGaugeProps {
 }
 
 export function LineAnalogGauge({ label, psi, min = 0, max = 400 }: LineAnalogGaugeProps) {
+  const [displayPsi, setDisplayPsi] = useState(psi)
+  const cavitating = useStore(selectCavitating)
+  
+  // Damping effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDisplayPsi(prev => dampValue(prev, psi, 8))
+    }, 50)
+    return () => clearInterval(interval)
+  }, [psi])
+  
+  // Cavitation jitter
+  const [jitter, setJitter] = useState(0)
+  useEffect(() => {
+    if (!cavitating) {
+      setJitter(0)
+      return
+    }
+    const interval = setInterval(() => {
+      setJitter((Math.random() - 0.5) * 6) // ±3 degrees
+    }, 100) // 10 Hz
+    return () => clearInterval(interval)
+  }, [cavitating])
+  
   const SWEEP = 240
   const START = -120
-  const pct = Math.max(0, Math.min(1, (psi - min) / (max - min)))
-  const angle = START + pct * SWEEP
+  const pct = Math.max(0, Math.min(1, (displayPsi - min) / (max - min)))
+  const angle = START + pct * SWEEP + jitter
 
   return (
     <div className="relative w-40 h-40 mx-auto">
@@ -113,7 +172,7 @@ export function LineAnalogGauge({ label, psi, min = 0, max = 400 }: LineAnalogGa
       
       {/* Digital readout below */}
       <div className="absolute -bottom-5 w-full text-center text-sm font-semibold tabular-nums">
-        {Math.round(psi)} PSI
+        {Math.round(displayPsi)} PSI
       </div>
       
       {/* Label above */}

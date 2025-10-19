@@ -3,6 +3,7 @@ import { X } from 'lucide-react'
 import { useStore } from '../state/store'
 import { StatusBar } from './StatusBar'
 import { SettingsModal } from './SettingsModal'
+import { AfterActionModal } from './AfterActionModal'
 import { AnalogGauge } from './Gauges'
 import { DischargeCard, IntakeCard, LevelsCard, PumpDataCard, GovernorCard, TwoHalfMultiplexer } from './Cards'
 import { useEngineAudio } from '../audio/useEngineAudio'
@@ -36,11 +37,13 @@ function WarningBanner() {
 
 export function Panel() {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [afterActionOpen, setAfterActionOpen] = useState(false)
   
   const pumpEngaged = useStore(state => state.pumpEngaged)
   const foamEnabled = useStore(state => state.foamEnabled)
   const discharges = useStore(state => state.discharges)
   const gauges = useStore(state => state.gauges)
+  const compactMode = useStore(state => state.uiPrefs.compactMode)
   const engagePump = useStore(state => state.engagePump)
   const disengagePump = useStore(state => state.disengagePump)
   const tickRpm = useStore(state => state.tickRpm)
@@ -85,13 +88,16 @@ export function Panel() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Status Bar */}
-      <StatusBar onOpenSettings={() => setSettingsOpen(true)} />
+      <StatusBar 
+        onOpenSettings={() => setSettingsOpen(true)} 
+        onOpenAfterAction={() => setAfterActionOpen(true)}
+      />
       
       {/* Warning Banner */}
       <WarningBanner />
 
       {/* Main Content */}
-      <div className="flex-1 p-6">
+      <div className="flex-1 p-3 sm:p-6">
         {!pumpEngaged ? (
           /* Engage Screen */
           <div className="flex items-center justify-center h-full">
@@ -125,10 +131,10 @@ export function Panel() {
             </div>
           </div>
         ) : (
-          /* Main Panel Screen */
-          <div className="grid grid-cols-12 gap-6">
+          /* Main Panel Screen - Mobile Responsive */
+          <div className="grid gap-3 sm:gap-4 lg:gap-6 lg:grid-cols-12 lg:auto-rows-min w-full">
             {/* Left Column - Status, Source, Levels */}
-            <div className="col-span-2 space-y-4">
+            <section className="lg:col-span-2 space-y-3 sm:space-y-4">
               <div className="puc-card">
                 <h3 className="text-sm font-semibold mb-3 text-center opacity-80">STATUS</h3>
                 
@@ -164,14 +170,14 @@ export function Panel() {
               
               <IntakeCard />
               <LevelsCard />
-            </div>
+            </section>
 
             {/* Center - Master Gauges & Discharges */}
-            <div className="col-span-8 space-y-6">
+            <section className="lg:col-span-8 space-y-4 sm:space-y-6">
               {/* Master Gauges */}
               <div className="puc-card">
                 <h3 className="text-sm font-semibold mb-4 text-center opacity-80">MASTER GAUGES</h3>
-                <div className="flex justify-around items-center">
+                <div className="flex flex-wrap justify-around items-center gap-4">
                   <AnalogGauge
                     label="INTAKE"
                     value={gauges.masterIntake}
@@ -200,7 +206,7 @@ export function Panel() {
               {/* Discharge Cards Grid */}
               <div>
                 <h3 className="text-sm font-semibold mb-3 opacity-80">DISCHARGES</h3>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   <DischargeCard discharge={discharges.xlay1} />
                   <DischargeCard discharge={discharges.xlay2} />
                   <DischargeCard discharge={discharges.xlay3} />
@@ -208,19 +214,22 @@ export function Panel() {
                   <TwoHalfMultiplexer />
                 </div>
               </div>
-            </div>
+            </section>
 
             {/* Right Column - Governor & Pump Data */}
-            <div className="col-span-2 space-y-4">
+            <section className={`lg:col-span-2 space-y-3 sm:space-y-4 ${compactMode ? 'hidden lg:block' : ''}`}>
               <GovernorCard />
               <PumpDataCard />
-            </div>
+            </section>
           </div>
         )}
       </div>
 
       {/* Settings Modal */}
       <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      
+      {/* After-Action Modal */}
+      <AfterActionModal isOpen={afterActionOpen} onClose={() => setAfterActionOpen(false)} />
     </div>
   )
 }
