@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useStore } from '../state/store'
 import { selectCavitating } from '../state/selectors'
+import crosslayGaugeFace from '../assets/crosslay_analog_gauge.png'
 
 interface AnalogGaugeProps {
   label: string
@@ -139,9 +140,9 @@ export function LineAnalogGauge({ label, psi, min = 0, max = 400 }: LineAnalogGa
 
   return (
     <div className="relative w-40 h-40 mx-auto">
-      {/* Face plate image - will be added later */}
+      {/* Face plate image */}
       <img 
-        src="/assets/crosslay_analog_gauge.png" 
+        src={crosslayGaugeFace}
         alt="" 
         className="absolute inset-0 w-full h-full object-contain pointer-events-none"
         onError={(e) => {

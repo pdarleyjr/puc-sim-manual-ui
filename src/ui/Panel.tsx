@@ -6,7 +6,7 @@ import { SettingsModal } from './SettingsModal'
 import { AfterActionModal } from './AfterActionModal'
 import { AnalogGauge } from './Gauges'
 import { DischargeCard, IntakeCard, LevelsCard, PumpDataCard, GovernorCard, TwoHalfMultiplexer, DeckGunCard } from './Cards'
-import { ScenarioCard } from './ScenarioCard'
+import { ScenarioHud } from './ScenarioHud'
 import { useEngineAudio } from '../audio/useEngineAudio'
 
 function WarningBanner() {
@@ -39,6 +39,8 @@ function WarningBanner() {
 export function Panel() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [afterActionOpen, setAfterActionOpen] = useState(false)
+  const [scenarioModeEnabled, setScenarioModeEnabled] = useState(false)
+  const [selectedScenario, setSelectedScenario] = useState<'residential_one_xlay' | 'residential_with_exposure'>('residential_one_xlay')
   
   const pumpEngaged = useStore(state => state.pumpEngaged)
   const foamEnabled = useStore(state => state.foamEnabled)
@@ -49,6 +51,8 @@ export function Panel() {
   const disengagePump = useStore(state => state.disengagePump)
   const tickRpm = useStore(state => state.tickRpm)
   const simTick = useStore(state => state.simTick)
+  const scenario = useStore(state => state.scenario)
+  const scenarioStart = useStore(state => state.scenarioStart)
 
   // Engine audio hook
   useEngineAudio()
@@ -80,11 +84,28 @@ export function Panel() {
 
   const handleEngageWater = () => {
     engagePump('water')
+    // If scenario mode is enabled, start the scenario
+    if (scenarioModeEnabled) {
+      // Small delay to ensure pump is fully engaged
+      setTimeout(() => {
+        scenarioStart(selectedScenario)
+      }, 100)
+    }
   }
 
   const handleEngageFoam = () => {
     engagePump('foam')
+    // If scenario mode is enabled, start the scenario
+    if (scenarioModeEnabled) {
+      // Small delay to ensure pump is fully engaged
+      setTimeout(() => {
+        scenarioStart(selectedScenario)
+      }, 100)
+    }
   }
+
+  // Check if in scenario mode
+  const isScenarioMode = scenario.status !== 'idle'
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -93,6 +114,9 @@ export function Panel() {
         onOpenSettings={() => setSettingsOpen(true)} 
         onOpenAfterAction={() => setAfterActionOpen(true)}
       />
+      
+      {/* Scenario HUD - shown when pump engaged and scenario active */}
+      {pumpEngaged && isScenarioMode && <ScenarioHud />}
       
       {/* Warning Banner */}
       <WarningBanner />
@@ -107,6 +131,37 @@ export function Panel() {
               <p className="text-sm opacity-60 mb-8">
                 Select pump mode to begin manual operation
               </p>
+              
+              {/* Scenario Mode Toggle */}
+              <div className="mb-6 p-4 bg-white/5 rounded-lg">
+                <label className="flex items-center justify-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={scenarioModeEnabled}
+                    onChange={(e) => setScenarioModeEnabled(e.target.checked)}
+                    className="w-5 h-5 rounded bg-white/10 border-white/20 checked:bg-emerald-500"
+                  />
+                  <span className="font-semibold">Scenario Mode</span>
+                </label>
+                
+                {scenarioModeEnabled && (
+                  <div className="mt-4">
+                    <label className="text-xs opacity-60 block mb-2">Select Scenario</label>
+                    <select
+                      value={selectedScenario}
+                      onChange={(e) => setSelectedScenario(e.target.value as typeof selectedScenario)}
+                      className="w-full px-3 py-2 bg-white/10 rounded-lg text-sm border border-white/20 focus:border-emerald-500 focus:outline-none"
+                    >
+                      <option value="residential_one_xlay" className="bg-gray-900">
+                        Single-story residential (one crosslay)
+                      </option>
+                      <option value="residential_with_exposure" className="bg-gray-900">
+                        Single-story residential with exposure
+                      </option>
+                    </select>
+                  </div>
+                )}
+              </div>
               
               <div className="space-y-4">
                 <button
@@ -132,9 +187,9 @@ export function Panel() {
             </div>
           </div>
         ) : (
-          /* Main Panel Screen - Mobile Responsive with Flex/Grid Hybrid */
+          /* Main Panel Screen */
           <div className="flex flex-col lg:grid lg:grid-cols-12 lg:auto-rows-min gap-3 sm:gap-4 lg:gap-6 w-full">
-            {/* Left Column - Status & Source (order-1 mobile, auto desktop) */}
+            {/* Left Column - Status & Source */}
             <section className="order-1 lg:order-none lg:col-span-2 space-y-3 sm:space-y-4">
               <div className="puc-card">
                 <h3 className="text-base sm:text-lg lg:text-xl font-semibold tracking-wide uppercase mb-3 text-center opacity-80 drop-shadow-md">STATUS</h3>
@@ -172,10 +227,9 @@ export function Panel() {
               <div id="source-card">
                 <IntakeCard />
               </div>
-              <ScenarioCard />
             </section>
 
-            {/* Center - Master Gauges & Discharges (order-4 mobile, auto desktop) */}
+            {/* Center - Master Gauges & Discharges */}
             <section className="order-4 lg:order-none lg:col-span-8 space-y-4 sm:space-y-6">
               {/* Master Gauges */}
               <div id="master-gauges" className="puc-card">
@@ -220,7 +274,7 @@ export function Panel() {
               </div>
             </section>
 
-            {/* Right Column - Governor, Levels, Pump Data (order-2,3 mobile, auto desktop) */}
+            {/* Right Column - Governor, Levels, Pump Data */}
             <section className={`lg:col-span-2 space-y-3 sm:space-y-4 ${compactMode ? 'hidden lg:block' : ''}`}>
               <div id="governor-card" className="order-2 lg:order-none">
                 <GovernorCard />
