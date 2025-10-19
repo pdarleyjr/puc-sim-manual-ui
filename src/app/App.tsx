@@ -4,7 +4,7 @@ import { ModeLauncher } from '../ui/launcher/ModeLauncher'
 import { useStore } from '../state/store'
 import type { LauncherMode } from '../state/launcher'
 import type { ScenarioId } from '../state/store'
-import { startOverviewTour, startLineConfigTour } from '../ui/tutorial/Tour'
+import { startOverviewTour } from '../ui/tutorial/Tour'
 
 function App() {
   const [showLauncher, setShowLauncher] = useState(true)
@@ -33,14 +33,7 @@ function App() {
         // Show overview tour on first visit
         if (firstVisit) {
           setTimeout(() => {
-            const tour = startOverviewTour()
-            tour.on('complete', () => {
-              // Prompt for line config tour
-              const wantsLineConfig = confirm('Would you like to learn about line configurations and 2½" evolutions?')
-              if (wantsLineConfig) {
-                startLineConfigTour()
-              }
-            })
+            startOverviewTour()
           }, 500)
         }
       }, 100)
@@ -56,14 +49,7 @@ function App() {
       // Panel only - show overview tour on first visit
       if (firstVisit) {
         setTimeout(() => {
-          const tour = startOverviewTour()
-          tour.on('complete', () => {
-            // Prompt for line config tour
-            const wantsLineConfig = confirm('Would you like to learn about line configurations and 2½" evolutions?')
-            if (wantsLineConfig) {
-              startLineConfigTour()
-            }
-          })
+          startOverviewTour()
         }, 500)
       }
     }

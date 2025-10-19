@@ -1,5 +1,6 @@
 import type { AppState } from './store'
 import { CAVITATION_INTAKE_THRESHOLD, CAVITATION_RPM_THRESHOLD, CAVITATION_DISCHARGE_THRESHOLD } from './constants'
+import { useLauncher } from './launcher'
 
 export const selectMasterIntake = (st: AppState) => st.gauges.masterIntake
 
@@ -26,4 +27,12 @@ export const selectResidualBadge = (st: AppState): 'green' | 'amber' | 'red' | n
   if (intake >= 20) return 'green'
   if (intake >= 10) return 'amber'
   return 'red'
+}
+
+// Tutorial context detection
+export function getEngageContext(): 'panel-only' | 'scenario-prearmed' | 'foam' {
+  const m = useLauncher.getState().chosenMode
+  if (m === 'scenario') return 'scenario-prearmed'
+  if (m === 'foam') return 'foam'
+  return 'panel-only'
 }

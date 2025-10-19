@@ -100,32 +100,35 @@ export function Panel() {
         {!pumpEngaged ? (
           /* Engage Screen - now simplified since launcher handles mode selection */
           <div className="flex items-center justify-center h-full">
-            <div id="engage-card" className="puc-card max-w-md w-full text-center p-8">
-              <h2 className="text-2xl font-bold mb-6">ENGAGE PUMP</h2>
-              <p className="text-sm opacity-60 mb-8">
-                Select pump mode to begin manual operation
-              </p>
-              
-              <div className="space-y-4">
-                <button
-                  onClick={() => useStore.getState().engagePump('water')}
-                  className="w-full px-6 py-4 bg-sky-500 hover:bg-sky-600 rounded-lg font-bold text-lg transition-all"
-                >
-                  Water Pump
-                </button>
-                
-                <button
-                  onClick={() => useStore.getState().engagePump('foam')}
-                  className="w-full px-6 py-4 bg-pink-500 hover:bg-pink-600 rounded-lg font-bold text-lg transition-all"
-                >
-                  Foam System
-                </button>
-              </div>
-
-              <div className="mt-6 p-4 bg-white/5 rounded-lg">
-                <p className="text-xs opacity-60">
-                  Manual operation only. Driver controls all valves, pressures, and throttle.
+            <div className="relative">
+              <span id="anchor-engage" className="absolute -right-2 top-4 h-0 w-0" aria-hidden="true" />
+              <div id="engage-card" className="puc-card max-w-md w-full text-center p-8">
+                <h2 className="text-2xl font-bold mb-6">ENGAGE PUMP</h2>
+                <p className="text-sm opacity-60 mb-8">
+                  Select pump mode to begin manual operation
                 </p>
+                
+                <div className="space-y-4">
+                  <button
+                    onClick={() => useStore.getState().engagePump('water')}
+                    className="w-full px-6 py-4 bg-sky-500 hover:bg-sky-600 rounded-lg font-bold text-lg transition-all"
+                  >
+                    Water Pump
+                  </button>
+                  
+                  <button
+                    onClick={() => useStore.getState().engagePump('foam')}
+                    className="w-full px-6 py-4 bg-pink-500 hover:bg-pink-600 rounded-lg font-bold text-lg transition-all"
+                  >
+                    Water Pump + Foam Manifold
+                  </button>
+                </div>
+
+                <div className="mt-6 p-4 bg-white/5 rounded-lg">
+                  <p className="text-xs opacity-60">
+                    Manual operation only. Driver controls all valves, pressures, and throttle.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -167,7 +170,8 @@ export function Panel() {
                 </div>
               </div>
               
-              <div id="source-card">
+              <div className="relative" id="source-card">
+                <span id="anchor-source" className="absolute -right-2 top-4 h-0 w-0" aria-hidden="true" />
                 <IntakeCard />
               </div>
             </section>
@@ -206,24 +210,36 @@ export function Panel() {
               {/* Discharge Cards Grid */}
               <div>
                 <h3 className="text-sm font-semibold mb-3 opacity-80">DISCHARGES</h3>
-                <div id="discharges-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  <DischargeCard discharge={discharges.xlay1} />
-                  <DischargeCard discharge={discharges.xlay2} />
-                  <DischargeCard discharge={discharges.xlay3} />
-                  <DischargeCard discharge={discharges.trashline} />
-                  <TwoHalfMultiplexer />
-                  <DeckGunCard />
+                <div className="relative">
+                  <span id="anchor-discharges" className="absolute left-4 -top-2 h-0 w-0" aria-hidden="true" />
+                  <div id="discharges-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                    <DischargeCard discharge={discharges.xlay1} />
+                    <DischargeCard discharge={discharges.xlay2} />
+                    <DischargeCard discharge={discharges.xlay3} />
+                    <DischargeCard discharge={discharges.trashline} />
+                    <div className="relative">
+                      <span id="anchor-twohalf" className="absolute left-1/2 -top-2 h-0 w-0" aria-hidden="true" />
+                      <TwoHalfMultiplexer />
+                    </div>
+                    <DeckGunCard />
+                  </div>
                 </div>
               </div>
             </section>
 
             {/* Right Column - Governor, Levels, Pump Data */}
             <section className={`lg:col-span-2 space-y-3 sm:space-y-4 ${compactMode ? 'hidden lg:block' : ''}`}>
-              <div id="governor-card" className="order-2 lg:order-none">
-                <GovernorCard />
+              <div className="relative order-2 lg:order-none">
+                <span id="anchor-governor" className="absolute -left-2 top-4 h-0 w-0" aria-hidden="true" />
+                <div id="governor-card">
+                  <GovernorCard />
+                </div>
               </div>
-              <div id="levels-card" className="order-3 lg:order-none">
-                <LevelsCard />
+              <div className="relative order-3 lg:order-none">
+                <span id="anchor-levels" className="absolute -left-2 top-4 h-0 w-0" aria-hidden="true" />
+                <div id="levels-card">
+                  <LevelsCard />
+                </div>
               </div>
               <div className="order-5 lg:order-none">
                 <PumpDataCard />
