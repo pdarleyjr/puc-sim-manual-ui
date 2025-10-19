@@ -591,6 +591,18 @@ export function IntakeCard() {
   const setIntakePsi = useStore(state => state.setIntakePsi)
   const tankFillPct = useStore(state => state.tankFillPct)
   const setTankFillPct = useStore(state => state.setTankFillPct)
+  const scenario = useStore(state => state.scenario)
+  const scenarioHydrantClicked = useStore(state => state.scenarioHydrantClicked)
+
+  const handleHydrantClick = () => {
+    if (scenario.status === 'running') {
+      // In scenario mode: check locks
+      scenarioHydrantClicked()
+    } else {
+      // Normal mode: toggle directly
+      setSource('hydrant')
+    }
+  }
 
   return (
     <div className="puc-card">
@@ -609,10 +621,13 @@ export function IntakeCard() {
           Tank-to-Pump
         </button>
         <button
-          onClick={() => setSource('hydrant')}
+          onClick={handleHydrantClick}
+          disabled={scenario.status === 'running' && !scenario.locks.hydrantSelectable}
           className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all ${
             source === 'hydrant'
               ? 'bg-sky-500 text-white'
+              : scenario.status === 'running' && !scenario.locks.hydrantSelectable
+              ? 'bg-white/5 text-white/30 cursor-not-allowed'
               : 'bg-white/10 text-white/60 hover:bg-white/20'
           }`}
         >

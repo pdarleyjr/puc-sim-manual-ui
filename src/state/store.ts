@@ -24,6 +24,34 @@ export type Source = 'none' | 'tank' | 'hydrant'
 export type DischargeId = 'xlay1' | 'xlay2' | 'xlay3' | 'trashline' | 'twohalfA' | 'twohalfB' | 'twohalfC' | 'twohalfD' | 'deckgun'
 export type GovernorMode = 'pressure' | 'rpm'
 
+// Scenario Mode types
+export type ScenarioId = 'residential_one_xlay' | 'residential_with_exposure'
+export type ScenarioStatus = 'idle' | 'running' | 'passed' | 'failed' | 'aborted'
+export type ScenarioUnit = 'E1' | 'E2' | 'E3' | 'L1' | 'L3' | 'E4'
+
+export interface ScenarioClock {
+  t0: number        // ms epoch when started
+  now: number       // ms current time (updated each tick)
+}
+
+export interface ScenarioEventFeed {
+  ts: number        // relative timestamp (ms from t0)
+  text: string
+}
+
+export interface ScenarioCtx {
+  id?: ScenarioId
+  status: ScenarioStatus
+  unit: ScenarioUnit
+  eventFeed: ScenarioEventFeed[]
+  locks: {
+    hydrantSelectable: boolean           // false at start until tactic announced
+    hydrantCountdownMs: number | null    // 30s countdown after user clicks hydrant
+  }
+  timers: number[]  // active setTimeout IDs for cleanup
+  clock?: ScenarioClock
+}
+
 // Assignment types
 export type AssignmentType = 'handline_175_fog' | 'fdc_standpipe' | 'skid_leader' | 'blitzfire' | 'portable_standpipe' | 'deck_gun'
 
@@ -123,6 +151,7 @@ export interface AppState {
   uiPrefs: UiPrefs
   lastRedlineCross: number  // timestamp of last redline crossing for edge detection
   tankFillPct: number       // 0..100 (tank fill/recirculate slider)
+  scenario: ScenarioCtx      // Scenario Mode state
 
   // Actions
   engagePump: (mode: 'water' | 'foam') => void
@@ -143,6 +172,15 @@ export interface AppState {
   endSession: () => void
   setCompactMode: (on: boolean) => void
   setTankFillPct: (pct: number) => void
+  
+  // Scenario Mode actions
+  scenarioEnter: () => void
+  scenarioStart: (id: ScenarioId) => void
+  scenarioAbort: () => void
+  scenarioExit: () => void
+  scenarioLog: (text: string) => void
+  scenarioHydrantClicked: () => void
+  scenarioTick: (dt: number) => void
 }
 
 // Compute P_base (hydrant intake + idle pump contribution)
@@ -429,6 +467,16 @@ export const useStore = create<AppState>((set, get) => ({
   },
   lastRedlineCross: 0,
   tankFillPct: 0,
+  scenario: {
+    status: 'idle',
+    unit: 'E1',
+    eventFeed: [],
+    locks: {
+      hydrantSelectable: false,
+      hydrantCountdownMs: null,
+    },
+    timers: [],
+  },
 
   engagePump: (mode) => {
     set({
@@ -445,6 +493,12 @@ export const useStore = create<AppState>((set, get) => ({
   disengagePump: () => {
     // Reset all "this engagement" counters
     const state = get()
+    
+    // Abort scenario if running
+    if (state.scenario.status === 'running') {
+      get().scenarioAbort()
+    }
+    
     const resetDischarges = Object.fromEntries(
       Object.entries(state.discharges).map(([id, d]) => [
         id,
@@ -651,6 +705,9 @@ export const useStore = create<AppState>((set, get) => ({
     const dtMs = state.lastSimTick > 0 ? now - state.lastSimTick : 100
     set({ lastSimTick: now })
 
+    // Update scenario clock and countdowns
+    get().scenarioTick(dtMs)
+
     // Tank Fill / Recirculate logic
     const s = state.tankFillPct / 100
     const Q_fill = s * (state.source === 'hydrant' ? FILL_QMAX_GPM : 50)
@@ -764,5 +821,139 @@ export const useStore = create<AppState>((set, get) => ({
       },
       warnings: newWarnings,
     })
+  },
+
+  // Scenario Mode actions (stubs - will be implemented fully)
+  scenarioEnter: () => {
+    set({
+      scenario: {
+        status: 'idle',
+        unit: 'E1',
+        eventFeed: [],
+        locks: { hydrantSelectable: false, hydrantCountdownMs: null },
+        timers: [],
+      }
+    })
+  },
+
+  scenarioStart: (id) => {
+    const state = get()
+    state.scenario.timers.forEach(t => window.clearTimeout(t))
+    
+    const units: ScenarioUnit[] = ['E1', 'E2', 'E3', 'L1', 'L3', 'E4']
+    const unit = units[Math.floor(Math.random() * units.length)]
+    const t0 = performance.now()
+    
+    set({
+      scenario: {
+        id,
+        status: 'running',
+        unit,
+        eventFeed: [],
+        locks: { hydrantSelectable: false, hydrantCountdownMs: null },
+        timers: [],
+        clock: { t0, now: t0 },
+      }
+    })
+    
+    get().scenarioLog(`${unit} dispatched. Scenario started.`)
+  },
+
+  scenarioAbort: () => {
+    const state = get()
+    state.scenario.timers.forEach(t => window.clearTimeout(t))
+    get().scenarioLog('Scenario aborted.')
+    
+    set({
+      scenario: {
+        ...state.scenario,
+        status: 'aborted',
+        timers: [],
+        locks: { hydrantSelectable: true, hydrantCountdownMs: null },
+      }
+    })
+  },
+
+  scenarioExit: () => {
+    const state = get()
+    if (state.scenario.status === 'running') return
+    
+    set({
+      scenario: {
+        status: 'idle',
+        unit: 'E1',
+        eventFeed: [],
+        locks: { hydrantSelectable: false, hydrantCountdownMs: null },
+        timers: [],
+      }
+    })
+  },
+
+  scenarioLog: (text) => {
+    const state = get()
+    if (!state.scenario.clock) return
+    
+    const ts = performance.now() - state.scenario.clock.t0
+    set({
+      scenario: {
+        ...state.scenario,
+        eventFeed: [...state.scenario.eventFeed, { ts, text }],
+      }
+    })
+    get().log('SCENARIO_EVENT', { text })
+  },
+
+  scenarioHydrantClicked: () => {
+    const state = get()
+    if (!state.scenario.locks.hydrantSelectable) {
+      get().scenarioLog('Hydrant not available yet.')
+      return
+    }
+    if (state.scenario.locks.hydrantCountdownMs !== null) {
+      get().scenarioLog('Hydrant already en route.')
+      return
+    }
+    
+    set({
+      scenario: {
+        ...state.scenario,
+        locks: { ...state.scenario.locks, hydrantCountdownMs: 30000 },
+      }
+    })
+    get().scenarioLog('Hydrant crew dispatched. ETA 30s.')
+  },
+
+  scenarioTick: (dt) => {
+    const state = get()
+    if (state.scenario.status !== 'running' || !state.scenario.clock) return
+    
+    const now = performance.now()
+    set({
+      scenario: {
+        ...state.scenario,
+        clock: { ...state.scenario.clock, now },
+      }
+    })
+    
+    if (state.scenario.locks.hydrantCountdownMs !== null) {
+      const newCountdown = state.scenario.locks.hydrantCountdownMs - dt
+      if (newCountdown <= 0) {
+        get().setSource('hydrant')
+        get().scenarioLog('Water supply established.')
+        set({
+          scenario: {
+            ...state.scenario,
+            locks: { ...state.scenario.locks, hydrantCountdownMs: null },
+          }
+        })
+      } else {
+        set({
+          scenario: {
+            ...state.scenario,
+            locks: { ...state.scenario.locks, hydrantCountdownMs: newCountdown },
+          }
+        })
+      }
+    }
   },
 }))

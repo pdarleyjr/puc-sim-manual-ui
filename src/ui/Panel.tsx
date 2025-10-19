@@ -6,6 +6,7 @@ import { SettingsModal } from './SettingsModal'
 import { AfterActionModal } from './AfterActionModal'
 import { AnalogGauge } from './Gauges'
 import { DischargeCard, IntakeCard, LevelsCard, PumpDataCard, GovernorCard, TwoHalfMultiplexer, DeckGunCard } from './Cards'
+import { ScenarioCard } from './ScenarioCard'
 import { useEngineAudio } from '../audio/useEngineAudio'
 
 function WarningBanner() {
@@ -131,10 +132,10 @@ export function Panel() {
             </div>
           </div>
         ) : (
-          /* Main Panel Screen - Mobile Responsive */
-          <div className="grid gap-3 sm:gap-4 lg:gap-6 lg:grid-cols-12 lg:auto-rows-min w-full">
-            {/* Left Column - Status, Source, Levels */}
-            <section className="lg:col-span-2 space-y-3 sm:space-y-4">
+          /* Main Panel Screen - Mobile Responsive with Flex/Grid Hybrid */
+          <div className="flex flex-col lg:grid lg:grid-cols-12 lg:auto-rows-min gap-3 sm:gap-4 lg:gap-6 w-full">
+            {/* Left Column - Status & Source (order-1 mobile, auto desktop) */}
+            <section className="order-1 lg:order-none lg:col-span-2 space-y-3 sm:space-y-4">
               <div className="puc-card">
                 <h3 className="text-base sm:text-lg lg:text-xl font-semibold tracking-wide uppercase mb-3 text-center opacity-80 drop-shadow-md">STATUS</h3>
                 
@@ -171,13 +172,13 @@ export function Panel() {
               <div id="source-card">
                 <IntakeCard />
               </div>
-              <LevelsCard />
+              <ScenarioCard />
             </section>
 
-            {/* Center - Master Gauges & Discharges */}
-            <section className="lg:col-span-8 space-y-4 sm:space-y-6">
+            {/* Center - Master Gauges & Discharges (order-4 mobile, auto desktop) */}
+            <section className="order-4 lg:order-none lg:col-span-8 space-y-4 sm:space-y-6">
               {/* Master Gauges */}
-              <div id="master-gauges" className="puc-card order-1 lg:order-none">
+              <div id="master-gauges" className="puc-card">
                 <h3 className="text-sm font-semibold mb-4 text-center opacity-80">MASTER GAUGES</h3>
                 <div className="flex flex-wrap justify-around items-center gap-4">
                   <AnalogGauge
@@ -206,7 +207,7 @@ export function Panel() {
               </div>
 
               {/* Discharge Cards Grid */}
-              <div className="order-3 lg:order-none">
+              <div>
                 <h3 className="text-sm font-semibold mb-3 opacity-80">DISCHARGES</h3>
                 <div id="discharges-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   <DischargeCard discharge={discharges.xlay1} />
@@ -219,12 +220,17 @@ export function Panel() {
               </div>
             </section>
 
-            {/* Right Column - Governor & Pump Data */}
-            <section className={`lg:col-span-2 space-y-3 sm:space-y-4 order-2 lg:order-none ${compactMode ? 'hidden lg:block' : ''}`}>
-              <div id="governor-card">
+            {/* Right Column - Governor, Levels, Pump Data (order-2,3 mobile, auto desktop) */}
+            <section className={`lg:col-span-2 space-y-3 sm:space-y-4 ${compactMode ? 'hidden lg:block' : ''}`}>
+              <div id="governor-card" className="order-2 lg:order-none">
                 <GovernorCard />
               </div>
-              <PumpDataCard />
+              <div id="levels-card" className="order-3 lg:order-none">
+                <LevelsCard />
+              </div>
+              <div className="order-5 lg:order-none">
+                <PumpDataCard />
+              </div>
             </section>
           </div>
         )}

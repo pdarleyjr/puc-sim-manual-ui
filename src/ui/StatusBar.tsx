@@ -22,6 +22,7 @@ export function StatusBar({ onOpenSettings, onOpenAfterAction }: StatusBarProps)
   const setSoundOn = useStore(state => state.setSoundOn)
   const cavitating = useStore(selectCavitating)
   const residualBadge = useStore(selectResidualBadge)
+  const disengagePump = useStore(state => state.disengagePump)
 
   return (
     <div className="bg-gray-900 border-b border-white/10 px-4 py-3">
@@ -34,6 +35,16 @@ export function StatusBar({ onOpenSettings, onOpenAfterAction }: StatusBarProps)
           }`}>
             {pumpEngaged ? 'PUMP ENGAGED' : 'PUMP OFF'}
           </div>
+
+          {/* Disengage Button (only when pump is engaged) */}
+          {pumpEngaged && (
+            <button
+              onClick={() => disengagePump()}
+              className="px-3 py-1 rounded-lg text-xs font-bold bg-red-500 hover:bg-red-600 text-white transition-all"
+            >
+              DISENGAGE PUMP
+            </button>
+          )}
 
           {/* Source indicator */}
           {source !== 'none' && (
