@@ -1,6 +1,200 @@
 import { LineAnalogGauge } from './Gauges'
-import type { Discharge } from '../state/store'
+import type { Discharge, DischargeId, AssignmentConfig } from '../state/store'
 import { useStore } from '../state/store'
+import { useState } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+
+interface AssignmentSelectorProps {
+  discharge: Discharge
+}
+
+function AssignmentSelector({ discharge }: AssignmentSelectorProps) {
+  const setLine = useStore(state => state.setLine)
+  const is2Half = discharge.id.startsWith('twohalf')
+  
+  const assignmentOptions: { value: AssignmentConfig['type']; label: string; requires2Half: boolean }[] = [
+    { value: 'handline_175_fog', label: 'Handline (1¾" Fog 175 @ 75)', requires2Half: false },
+    { value: 'fdc_standpipe', label: 'FDC / Standpipe', requires2Half: true },
+    { value: 'skid_leader', label: 'Skid Load (Leader Line)', requires2Half: true },
+    { value: 'blitzfire', label: 'Portable Monitor: Blitzfire', requires2Half: true },
+    { value: 'portable_standpipe', label: 'Portable Standpipe', requires2Half: true },
+  ]
+  
+  const handleAssignmentChange = (type: AssignmentConfig['type']) => {
+    const option = assignmentOptions.find(o => o.value === type)
+    if (option?.requires2Half && !is2Half) return // Guard
+    
+    // Set default config based on type
+    let newAssignment: AssignmentConfig
+    switch (type) {
+      case 'handline_175_fog':
+        newAssignment = { type: 'handline_175_fog' }
+        break
+      case 'fdc_standpipe':
+        newAssignment = { type: 'fdc_standpipe', floors: 5 }
+        break
+      case 'skid_leader':
+        newAssignment = { type: 'skid_leader', setbackFt: 100 }
+        break
+      case 'blitzfire':
+        newAssignment = { type: 'blitzfire', mode: 'std100', len3inFt: 100 }
+        break
+      case 'portable_standpipe':
+        newAssignment = { type: 'portable_standpipe', floors: 5, len3inFt: 100 }
+        break
+    }
+    setLine(discharge.id, { assignment: newAssignment })
+  }
+  
+  const updateConfig = (patch: Partial<AssignmentConfig>) => {
+    setLine(discharge.id, { assignment: { ...discharge.assignment, ...patch } as AssignmentConfig })
+  }
+  
+  return (
+    <div className="mt-3 space-y-2">
+      {/* Assignment Dropdown */}
+      <div>
+        <label className="text-xs opacity-60">Assignment</label>
+        <select
+          value={discharge.assignment.type}
+          onChange={(e) => handleAssignmentChange(e.target.value as AssignmentConfig['type'])}
+          className="w-full mt-1 px-3 py-2 bg-white/10 rounded-lg text-sm border border-white/20 focus:border-emerald-500 focus:outline-none"
+        >
+          {assignmentOptions.map(opt => (
+            <option 
+              key={opt.value} 
+              value={opt.value}
+              disabled={opt.requires2Half && !is2Half}
+              className="bg-gray-900"
+            >
+              {opt.label} {opt.requires2Half && !is2Half ? '(2½" only)' : ''}
+            </option>
+          ))}
+        </select>
+      </div>
+      
+      {/* Config Prompts */}
+      {discharge.assignment.type === 'fdc_standpipe' && (
+        <div className="bg-black/20 rounded-lg p-3 space-y-2">
+          <label className="text-xs opacity-60">Fire Floor</label>
+          <input
+            type="number"
+            min="2"
+            max="50"
+            value={discharge.assignment.floors}
+            onChange={(e) => updateConfig({ floors: Math.max(2, Number(e.target.value)) })}
+            className="w-full px-3 py-2 bg-white/10 rounded text-sm border border-white/20 focus:border-emerald-500 focus:outline-none"
+          />
+          <div className="text-xs opacity-60">≈{Math.round(discharge.assignment.floors * 5)} PSI elevation</div>
+        </div>
+      )}
+      
+      {discharge.assignment.type === 'skid_leader' && (
+        <div className="bg-black/20 rounded-lg p-3 space-y-2">
+          <label className="text-xs opacity-60">Setback Distance (ft)</label>
+          <div className="flex gap-2">
+            {[50, 100, 150, 200, 250].map(ft => (
+              <button
+                key={ft}
+                onClick={() => updateConfig({ setbackFt: ft })}
+                className={`flex-1 px-2 py-1 text-xs rounded transition-all ${
+                  discharge.assignment.type === 'skid_leader' && discharge.assignment.setbackFt === ft
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-white/10 hover:bg-white/20'
+                }`}
+              >
+                {ft}′
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {discharge.assignment.type === 'blitzfire' && (
+        <div className="bg-black/20 rounded-lg p-3 space-y-3">
+          <div>
+            <label className="text-xs opacity-60">Mode</label>
+            <div className="flex gap-2 mt-1">
+              <button
+                onClick={() => updateConfig({ mode: 'low55' })}
+                className={`flex-1 px-3 py-2 rounded font-semibold transition-all ${
+                  discharge.assignment.type === 'blitzfire' && discharge.assignment.mode === 'low55'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-white/10 hover:bg-white/20'
+                }`}
+              >
+                Low 55
+              </button>
+              <button
+                onClick={() => updateConfig({ mode: 'std100' })}
+                className={`flex-1 px-3 py-2 rounded font-semibold transition-all ${
+                  discharge.assignment.type === 'blitzfire' && discharge.assignment.mode === 'std100'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-white/10 hover:bg-white/20'
+                }`}
+              >
+                Std 100
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs opacity-60">3″ Supply Length (ft)</label>
+            <div className="flex gap-2 mt-1">
+              {[50, 100, 150, 200].map(ft => (
+                <button
+                  key={ft}
+                  onClick={() => updateConfig({ len3inFt: ft })}
+                  className={`flex-1 px-2 py-1 text-xs rounded transition-all ${
+                    discharge.assignment.type === 'blitzfire' && discharge.assignment.len3inFt === ft
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-white/10 hover:bg-white/20'
+                  }`}
+                >
+                  {ft}′
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {discharge.assignment.type === 'portable_standpipe' && (
+        <div className="bg-black/20 rounded-lg p-3 space-y-3">
+          <div>
+            <label className="text-xs opacity-60">Floors</label>
+            <input
+              type="number"
+              min="2"
+              max="50"
+              value={discharge.assignment.floors}
+              onChange={(e) => updateConfig({ floors: Math.max(2, Number(e.target.value)) })}
+              className="w-full px-3 py-2 bg-white/10 rounded text-sm border border-white/20 focus:border-emerald-500 focus:outline-none"
+            />
+            <div className="text-xs opacity-60 mt-1">≈{Math.round(discharge.assignment.floors * 5)} PSI elevation</div>
+          </div>
+          <div>
+            <label className="text-xs opacity-60">3″ Supply Length (ft)</label>
+            <div className="flex gap-2 mt-1">
+              {[50, 100, 150, 200].map(ft => (
+                <button
+                  key={ft}
+                  onClick={() => updateConfig({ len3inFt: ft })}
+                  className={`flex-1 px-2 py-1 text-xs rounded transition-all ${
+                    discharge.assignment.type === 'portable_standpipe' && discharge.assignment.len3inFt === ft
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-white/10 hover:bg-white/20'
+                  }`}
+                >
+                  {ft}′
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface DischargeCardProps {
   discharge: Discharge
@@ -63,6 +257,9 @@ export function DischargeCard({ discharge }: DischargeCardProps) {
         </div>
       </div>
       
+      {/* Assignment Selector */}
+      <AssignmentSelector discharge={discharge} />
+      
       {/* Open/Closed Toggle */}
       <div className="mt-4 flex items-center justify-center gap-2">
         <button
@@ -112,6 +309,68 @@ export function DischargeCard({ discharge }: DischargeCardProps) {
           Foam Capable
         </div>
       )}
+    </div>
+  )
+}
+
+export function TwoHalfMultiplexer() {
+  const [activeTab, setActiveTab] = useState<'A' | 'B' | 'C' | 'D'>('A')
+  const discharges = useStore(state => state.discharges)
+  
+  const lineIds: Record<'A' | 'B' | 'C' | 'D', DischargeId> = {
+    A: 'twohalfA',
+    B: 'twohalfB',
+    C: 'twohalfC',
+    D: 'twohalfD',
+  }
+  
+  const activeLine = discharges[lineIds[activeTab]]
+  
+  const tabs: ('A' | 'B' | 'C' | 'D')[] = ['A', 'B', 'C', 'D']
+  
+  return (
+    <div className="puc-card">
+      {/* Tab Selector */}
+      <div className="flex items-center gap-2 mb-4">
+        <button
+          onClick={() => {
+            const idx = tabs.indexOf(activeTab)
+            setActiveTab(tabs[(idx - 1 + tabs.length) % tabs.length])
+          }}
+          className="p-2 bg-white/10 hover:bg-white/20 rounded transition-all"
+        >
+          <ChevronLeft size={16} />
+        </button>
+        
+        <div className="flex-1 flex gap-1">
+          {tabs.map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-2 rounded font-semibold transition-all ${
+                activeTab === tab
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-white/10 text-white/60 hover:bg-white/20'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+        
+        <button
+          onClick={() => {
+            const idx = tabs.indexOf(activeTab)
+            setActiveTab(tabs[(idx + 1) % tabs.length])
+          }}
+          className="p-2 bg-white/10 hover:bg-white/20 rounded transition-all"
+        >
+          <ChevronRight size={16} />
+        </button>
+      </div>
+      
+      {/* Active Line Card (without outer card wrapper) */}
+      <DischargeCard discharge={activeLine} />
     </div>
   )
 }

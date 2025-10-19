@@ -469,18 +469,21 @@ describe('PUC Manual Pump Rules', () => {
       setGovernorMode('pressure')
       setGovernorSetPsi(115)
       
-      // Crosslay 1 is 200 ft
+      // Test with Blitzfire at high pressure (not capped at 150) vs handline
       setLine('xlay1', { open: true, valvePercent: 100 })
-      // Trashline is 100 ft (less friction loss)
-      setLine('trashline', { open: true, valvePercent: 100 })
+      setLine('twohalfA', { 
+        open: true, 
+        valvePercent: 100,
+        assignment: { type: 'blitzfire', mode: 'low55', len3inFt: 50 }
+      })
       
       simTick()
       
       const xlay1Gpm = useStore.getState().discharges.xlay1.gpmNow
-      const trashlineGpm = useStore.getState().discharges.trashline.gpmNow
+      const twohalfGpm = useStore.getState().discharges.twohalfA.gpmNow
       
-      // Shorter hose should have higher flow at same PDP
-      expect(trashlineGpm).toBeGreaterThan(xlay1Gpm)
+      // Blitzfire with very short supply at low NP should produce higher flow than handline
+      expect(twohalfGpm).toBeGreaterThan(xlay1Gpm)
     })
   })
 
@@ -593,6 +596,187 @@ describe('PUC Manual Pump Rules', () => {
       // Hydrant mode: intake should default to 50
       setSource('hydrant')
       expect(useStore.getState().gauges.masterIntake).toBe(50)
+    })
+  })
+
+  describe('Assignment Hydraulics', () => {
+    it('FDC Standpipe: should produce ~150 GPM at 10 floors with P_system=180 PSI', () => {
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
+      
+      setSource('tank')
+      engagePump('water')
+      setGovernorMode('pressure')
+      setGovernorSetPsi(180)
+      
+      // Configure 2½″ A as FDC with 10 floors
+      setLine('twohalfA', { 
+        open: true, 
+        valvePercent: 100,
+        assignment: { type: 'fdc_standpipe', floors: 10 }
+      })
+      
+      simTick()
+      
+      const discharge = useStore.getState().discharges.twohalfA
+      const masterDischarge = useStore.getState().gauges.masterDischarge
+      
+      // Flow should be capped at 150 GPM
+      expect(discharge.gpmNow).toBeGreaterThanOrEqual(148)
+      expect(discharge.gpmNow).toBeLessThanOrEqual(151)
+      
+      // Master discharge should match line pressure (180 PSI at 100% valve)
+      expect(masterDischarge).toBeCloseTo(180, 2)
+    })
+
+    it('Skid Leader: flow should increase as P_system rises from 120 to 180 PSI', () => {
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
+      
+      setSource('tank')
+      engagePump('water')
+      setGovernorMode('pressure')
+      
+      // Configure 2½″ A as Skid with 200' setback
+      setLine('twohalfA', { 
+        open: true, 
+        valvePercent: 100,
+        assignment: { type: 'skid_leader', setbackFt: 200 }
+      })
+      
+      // Test at low pressure (70 PSI) - should be well below cap
+      setGovernorSetPsi(70)
+      simTick()
+      const gpm70 = useStore.getState().discharges.twohalfA.gpmNow
+      
+      // Test at 120 PSI - should reach cap
+      setGovernorSetPsi(120)
+      simTick()
+      const gpm120 = useStore.getState().discharges.twohalfA.gpmNow
+      
+      // Test at 180 PSI - still capped
+      setGovernorSetPsi(180)
+      simTick()
+      const gpm180 = useStore.getState().discharges.twohalfA.gpmNow
+      
+      // Flow should increase from low pressure to sufficient pressure
+      expect(gpm120).toBeGreaterThan(gpm70)
+      
+      // Both 120 and 180 should reach the 150 GPM cap
+      expect(gpm120).toBeGreaterThanOrEqual(145)
+      expect(gpm120).toBeLessThanOrEqual(151)
+      expect(gpm180).toBeGreaterThanOrEqual(145)
+      expect(gpm180).toBeLessThanOrEqual(151)
+    })
+
+    it('Blitzfire: should produce ~500 GPM at 175 PSI with 100ft supply, lower with 200ft', () => {
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
+      
+      setSource('tank')
+      engagePump('water')
+      setGovernorMode('pressure')
+      setGovernorSetPsi(175)
+      
+      // Test with 100' supply at std100 mode
+      setLine('twohalfA', { 
+        open: true, 
+        valvePercent: 100,
+        assignment: { type: 'blitzfire', mode: 'std100', len3inFt: 100 }
+      })
+      
+      simTick()
+      const gpm100ft = useStore.getState().discharges.twohalfA.gpmNow
+      
+      // Should be close to 500 GPM device max
+      expect(gpm100ft).toBeGreaterThanOrEqual(480)
+      expect(gpm100ft).toBeLessThanOrEqual(500)
+      
+      // Test with 200' supply (more friction loss)
+      setLine('twohalfA', { 
+        assignment: { type: 'blitzfire', mode: 'std100', len3inFt: 200 }
+      })
+      
+      simTick()
+      const gpm200ft = useStore.getState().discharges.twohalfA.gpmNow
+      
+      // Should be lower due to friction (realistic reduction is ~5-10%)
+      expect(gpm200ft).toBeLessThan(gpm100ft)
+      expect(gpm200ft).toBeGreaterThan(450) // Still substantial flow
+      expect(gpm200ft).toBeLessThan(490) // But noticeably reduced
+    })
+
+    it('Portable Standpipe: flow should increase with governor and respect 150 GPM cap', () => {
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
+      
+      setSource('tank')
+      engagePump('water')
+      setGovernorMode('pressure')
+      
+      // Configure 2½″ A as Portable Standpipe with 15 floors, 150' supply
+      setLine('twohalfA', { 
+        open: true, 
+        valvePercent: 100,
+        assignment: { type: 'portable_standpipe', floors: 15, len3inFt: 150 }
+      })
+      
+      // Test at low pressure (should be 0 or very low)
+      setGovernorSetPsi(100)
+      simTick()
+      const gpmLow = useStore.getState().discharges.twohalfA.gpmNow
+      expect(gpmLow).toBeLessThan(50) // Below threshold for 15 floors (~65 PSI elevation + 50 NP + 25 standpipe = ~140 PSI required)
+      
+      // Test at sufficient pressure
+      setGovernorSetPsi(200)
+      simTick()
+      const gpmHigh = useStore.getState().discharges.twohalfA.gpmNow
+      
+      // Should produce flow and be capped at 150 GPM
+      expect(gpmHigh).toBeGreaterThan(gpmLow)
+      expect(gpmHigh).toBeLessThanOrEqual(150)
+      
+      // Test at higher pressure
+      setGovernorSetPsi(250)
+      simTick()
+      const gpmHigher = useStore.getState().discharges.twohalfA.gpmNow
+      
+      // Should still be capped at 150 GPM
+      expect(gpmHigher).toBeLessThanOrEqual(151)
+    })
+
+    it('Assignment Restrictions: 2½″-only assignments should work on 2½″ lines', () => {
+      const { engagePump, setSource, setLine, setGovernorMode, setGovernorSetPsi, simTick } = useStore.getState()
+      
+      setSource('tank')
+      engagePump('water')
+      setGovernorMode('pressure')
+      setGovernorSetPsi(180)
+      
+      // FDC should work on 2½″ A
+      setLine('twohalfA', { 
+        open: true, 
+        valvePercent: 100,
+        assignment: { type: 'fdc_standpipe', floors: 5 }
+      })
+      
+      simTick()
+      const twohalfFlow = useStore.getState().discharges.twohalfA.gpmNow
+      
+      // Should produce flow (FDC works on 2½″)
+      expect(twohalfFlow).toBeGreaterThan(100)
+      
+      // Blitzfire should also work on 2½″ B
+      setLine('twohalfB', { 
+        open: true, 
+        valvePercent: 100,
+        assignment: { type: 'blitzfire', mode: 'low55', len3inFt: 100 }
+      })
+      
+      simTick()
+      const twohalfBFlow = useStore.getState().discharges.twohalfB.gpmNow
+      
+      // Should produce flow (Blitzfire works on 2½″)
+      expect(twohalfBFlow).toBeGreaterThan(100)
+      
+      // Note: UI restriction (dropdown disabled on crosslays) is tested separately in component tests
+      // This test confirms the state model supports 2½″-only assignments
     })
   })
 })

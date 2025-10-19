@@ -4,7 +4,7 @@ import { useStore } from '../state/store'
 import { StatusBar } from './StatusBar'
 import { SettingsModal } from './SettingsModal'
 import { AnalogGauge } from './Gauges'
-import { DischargeCard, IntakeCard, LevelsCard, PumpDataCard, GovernorCard } from './Cards'
+import { DischargeCard, IntakeCard, LevelsCard, PumpDataCard, GovernorCard, TwoHalfMultiplexer } from './Cards'
 import { useEngineAudio } from '../audio/useEngineAudio'
 
 function WarningBanner() {
@@ -205,7 +205,7 @@ export function Panel() {
                   <DischargeCard discharge={discharges.xlay2} />
                   <DischargeCard discharge={discharges.xlay3} />
                   <DischargeCard discharge={discharges.trashline} />
-                  <DischargeCard discharge={discharges.twohalfA} />
+                  <TwoHalfMultiplexer />
                 </div>
               </div>
             </div>

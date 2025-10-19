@@ -1,8 +1,32 @@
 import { create } from 'zustand'
+import {
+  C_175_FOG,
+  C_3IN_BIG10,
+  NP_SMOOTHBORE_HAND,
+  BLITZ_NP_STD,
+  BLITZ_NP_LOW,
+  BLITZ_APPLIANCE_LOSS_500,
+  BLITZFIRE_MAX_GPM,
+  STANDPIPE_ALLOWANCE,
+  FEET_PER_FLOOR,
+  PSI_PER_FOOT,
+  HRP_LENGTH,
+  HRP_TARGET_GPM,
+} from './constants'
 
 export type Source = 'none' | 'tank' | 'hydrant'
-export type DischargeId = 'xlay1' | 'xlay2' | 'xlay3' | 'trashline' | 'twohalfA'
+export type DischargeId = 'xlay1' | 'xlay2' | 'xlay3' | 'trashline' | 'twohalfA' | 'twohalfB' | 'twohalfC' | 'twohalfD'
 export type GovernorMode = 'pressure' | 'rpm'
+
+// Assignment types
+export type AssignmentType = 'handline_175_fog' | 'fdc_standpipe' | 'skid_leader' | 'blitzfire' | 'portable_standpipe'
+
+export type AssignmentConfig =
+  | { type: 'handline_175_fog' }
+  | { type: 'fdc_standpipe'; floors: number }
+  | { type: 'skid_leader'; setbackFt: number }
+  | { type: 'blitzfire'; mode: 'low55' | 'std100'; len3inFt: number }
+  | { type: 'portable_standpipe'; floors: number; len3inFt: number }
 
 // Hydraulics constants
 const HOSE_COEFF_C = 6.59                 // Key Combat Ready 1¾″
@@ -32,9 +56,10 @@ export interface Discharge {
   id: DischargeId
   label: string
   open: boolean
-  valvePercent: number    // Changed from setPsi to valve % open (0-100)
+  valvePercent: number    // 0-100 (valve % open)
   foamCapable: boolean
   lengthFt: number
+  assignment: AssignmentConfig  // NEW: assignment configuration
   gpmNow: number
   gallonsThisEng: number
 }
@@ -132,7 +157,7 @@ function computeTargetRpm(state: AppState): number {
   }
 }
 
-// Flow computation from PDP
+// Flow computation from PDP (for handline_175_fog only)
 function computeFogFlowFromPdp(pdp: number, lengthFt: number): { gpm: number; np: number; fl: number } {
   if (pdp <= 0) return { gpm: 0, np: 0, fl: 0 }
   const a = (1 / (K_FACTOR * K_FACTOR)) + (HOSE_COEFF_C * (lengthFt / 1_000_000))
@@ -141,6 +166,61 @@ function computeFogFlowFromPdp(pdp: number, lengthFt: number): { gpm: number; np
   const np = (gpm / K_FACTOR) ** 2
   const fl = pdp - np
   return { gpm, np, fl }
+}
+
+// Assignment-specific flow computation
+function computeAssignmentFlow(P_line_at_panel: number, assignment: AssignmentConfig): number {
+  if (P_line_at_panel <= 0) return 0
+
+  switch (assignment.type) {
+    case 'handline_175_fog': {
+      // Use existing fog nozzle computation (K-factor based)
+      const { gpm } = computeFogFlowFromPdp(P_line_at_panel, LEN_CROSSLAY)
+      return gpm
+    }
+
+    case 'fdc_standpipe': {
+      // FDC: 3″ supply + elevation + standpipe + 200' HRP (1¾″) + smooth bore
+      const elevPsi = assignment.floors * FEET_PER_FLOOR * PSI_PER_FOOT
+      const A_pack = C_175_FOG * (HRP_LENGTH / 100) / 10000
+      const B = NP_SMOOTHBORE_HAND + elevPsi + STANDPIPE_ALLOWANCE
+      const Q = Math.sqrt(Math.max(0, (P_line_at_panel - B) / A_pack))
+      return Math.min(HRP_TARGET_GPM, Q)
+    }
+
+    case 'skid_leader': {
+      // Skid: 3″ supply + 200' HRP (1¾″) + smooth bore
+      const A_3in = C_3IN_BIG10 * (assignment.setbackFt / 100) / 10000
+      const A_pack = C_175_FOG * (HRP_LENGTH / 100) / 10000
+      const A_total = A_3in + A_pack
+      const B = NP_SMOOTHBORE_HAND
+      const Q = Math.sqrt(Math.max(0, (P_line_at_panel - B) / A_total))
+      return Math.min(HRP_TARGET_GPM, Q)
+    }
+
+    case 'blitzfire': {
+      // Blitzfire: 3″ supply + appliance loss + NP (55 or 100)
+      const NP = assignment.mode === 'std100' ? BLITZ_NP_STD : BLITZ_NP_LOW
+      const A_3in = C_3IN_BIG10 * (assignment.len3inFt / 100) / 10000
+      const k_app = BLITZ_APPLIANCE_LOSS_500 / (500 * 500)
+      const A_total = A_3in + k_app
+      const B = NP
+      let Q = Math.sqrt(Math.max(0, (P_line_at_panel - B) / A_total))
+      Q = Math.min(Q, BLITZFIRE_MAX_GPM)
+      return Q
+    }
+
+    case 'portable_standpipe': {
+      // Portable: 3″ supply + elevation + standpipe + 200' HRP + smooth bore
+      const elevPsi = assignment.floors * FEET_PER_FLOOR * PSI_PER_FOOT
+      const A_3in = C_3IN_BIG10 * (assignment.len3inFt / 100) / 10000
+      const A_pack = C_175_FOG * (HRP_LENGTH / 100) / 10000
+      const A_total = A_3in + A_pack
+      const B = NP_SMOOTHBORE_HAND + elevPsi + STANDPIPE_ALLOWANCE
+      const Q = Math.sqrt(Math.max(0, (P_line_at_panel - B) / A_total))
+      return Math.min(HRP_TARGET_GPM, Q)
+    }
+  }
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -154,11 +234,94 @@ export const useStore = create<AppState>((set, get) => ({
     setRpm: 1200,
   },
   discharges: {
-    xlay1: { id: 'xlay1', label: 'Crosslay 1', open: false, valvePercent: 0, foamCapable: true, lengthFt: LEN_CROSSLAY, gpmNow: 0, gallonsThisEng: 0 },
-    xlay2: { id: 'xlay2', label: 'Crosslay 2', open: false, valvePercent: 0, foamCapable: true, lengthFt: LEN_CROSSLAY, gpmNow: 0, gallonsThisEng: 0 },
-    xlay3: { id: 'xlay3', label: 'Crosslay 3', open: false, valvePercent: 0, foamCapable: true, lengthFt: LEN_CROSSLAY, gpmNow: 0, gallonsThisEng: 0 },
-    trashline: { id: 'trashline', label: 'Front Trashline', open: false, valvePercent: 0, foamCapable: false, lengthFt: LEN_TRASHLINE, gpmNow: 0, gallonsThisEng: 0 },
-    twohalfA: { id: 'twohalfA', label: '2½″ A', open: false, valvePercent: 0, foamCapable: true, lengthFt: LEN_TWOHALF_A, gpmNow: 0, gallonsThisEng: 0 },
+    xlay1: { 
+      id: 'xlay1', 
+      label: 'Crosslay 1', 
+      open: false, 
+      valvePercent: 0, 
+      foamCapable: true, 
+      lengthFt: LEN_CROSSLAY, 
+      assignment: { type: 'handline_175_fog' },
+      gpmNow: 0, 
+      gallonsThisEng: 0 
+    },
+    xlay2: { 
+      id: 'xlay2', 
+      label: 'Crosslay 2', 
+      open: false, 
+      valvePercent: 0, 
+      foamCapable: true, 
+      lengthFt: LEN_CROSSLAY, 
+      assignment: { type: 'handline_175_fog' },
+      gpmNow: 0, 
+      gallonsThisEng: 0 
+    },
+    xlay3: { 
+      id: 'xlay3', 
+      label: 'Crosslay 3', 
+      open: false, 
+      valvePercent: 0, 
+      foamCapable: true, 
+      lengthFt: LEN_CROSSLAY, 
+      assignment: { type: 'handline_175_fog' },
+      gpmNow: 0, 
+      gallonsThisEng: 0 
+    },
+    trashline: { 
+      id: 'trashline', 
+      label: 'Front Trashline', 
+      open: false, 
+      valvePercent: 0, 
+      foamCapable: false, 
+      lengthFt: LEN_TRASHLINE, 
+      assignment: { type: 'handline_175_fog' },
+      gpmNow: 0, 
+      gallonsThisEng: 0 
+    },
+    twohalfA: { 
+      id: 'twohalfA', 
+      label: '2½″ A', 
+      open: false, 
+      valvePercent: 0, 
+      foamCapable: true, 
+      lengthFt: LEN_TWOHALF_A, 
+      assignment: { type: 'handline_175_fog' },
+      gpmNow: 0, 
+      gallonsThisEng: 0 
+    },
+    twohalfB: { 
+      id: 'twohalfB', 
+      label: '2½″ B', 
+      open: false, 
+      valvePercent: 0, 
+      foamCapable: true, 
+      lengthFt: LEN_TWOHALF_A, 
+      assignment: { type: 'handline_175_fog' },
+      gpmNow: 0, 
+      gallonsThisEng: 0 
+    },
+    twohalfC: { 
+      id: 'twohalfC', 
+      label: '2½″ C', 
+      open: false, 
+      valvePercent: 0, 
+      foamCapable: true, 
+      lengthFt: LEN_TWOHALF_A, 
+      assignment: { type: 'handline_175_fog' },
+      gpmNow: 0, 
+      gallonsThisEng: 0 
+    },
+    twohalfD: { 
+      id: 'twohalfD', 
+      label: '2½″ D', 
+      open: false, 
+      valvePercent: 0, 
+      foamCapable: true, 
+      lengthFt: LEN_TWOHALF_A, 
+      assignment: { type: 'handline_175_fog' },
+      gpmNow: 0, 
+      gallonsThisEng: 0 
+    },
   },
   gauges: {
     masterIntake: 0,
@@ -355,7 +518,9 @@ export const useStore = create<AppState>((set, get) => ({
       const d = updatedDischarges[id]
       // Per-line pressure = valve% × system pressure
       const P_line = d.open ? (d.valvePercent / 100) * P_system : 0
-      const { gpm } = computeFogFlowFromPdp(P_line, d.lengthFt)
+      
+      // Use assignment-specific flow computation
+      const gpm = computeAssignmentFlow(P_line, d.assignment)
 
       // Tank empty logic: if on tank and water==0 → no flow
       const effectiveGpm = (state.source === 'tank' && state.gauges.waterGal <= 0) ? 0 : gpm
