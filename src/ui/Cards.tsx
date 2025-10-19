@@ -208,32 +208,6 @@ function AssignmentSelector({ discharge }: AssignmentSelectorProps) {
 export function DeckGunCard() {
   const discharge = useStore(state => state.discharges.deckgun)
   const setLine = useStore(state => state.setLine)
-  const governor = useStore(state => state.governor)
-  const source = useStore(state => state.source)
-  const masterIntake = useStore(state => state.gauges.masterIntake)
-  const waterGal = useStore(state => state.gauges.waterGal)
-  
-  // Compute system pressure
-  const IDLE_PUMP_DELTA_PSI = 50
-  
-  const waterAvailable =
-    (source === 'hydrant' && masterIntake > 0) ||
-    (source === 'tank' && waterGal > 0)
-  
-  let P_system = 0
-  if (waterAvailable) {
-    const P_base = source === 'tank' 
-      ? IDLE_PUMP_DELTA_PSI 
-      : masterIntake + IDLE_PUMP_DELTA_PSI
-    P_system = P_base
-    if (governor.enabled) {
-      if (governor.mode === 'pressure') {
-        P_system = Math.min(400, Math.max(governor.setPsi, P_base))
-      }
-    }
-  }
-  
-  const displayPsi = discharge.open ? (discharge.valvePercent / 100) * P_system : 0
 
   const handleToggle = () => {
     setLine('deckgun', { open: !discharge.open })
@@ -254,7 +228,7 @@ export function DeckGunCard() {
   return (
     <div className="puc-card">
       {/* Gauge */}
-      <LineAnalogGauge label={discharge.label} psi={displayPsi} />
+      <LineAnalogGauge label={discharge.label} psi={discharge.displayPsi} />
       
       {/* Flow Stats */}
       <div className="mt-3 space-y-1 text-center text-sm">
@@ -350,33 +324,6 @@ interface DischargeCardProps {
 
 export function DischargeCard({ discharge }: DischargeCardProps) {
   const setLine = useStore(state => state.setLine)
-  const governor = useStore(state => state.governor)
-  const source = useStore(state => state.source)
-  const masterIntake = useStore(state => state.gauges.masterIntake)
-  const waterGal = useStore(state => state.gauges.waterGal)
-  
-  // Compute system pressure to show actual line pressure
-  const IDLE_PUMP_DELTA_PSI = 50
-  
-  // Check if water is available (dry pump guard)
-  const waterAvailable =
-    (source === 'hydrant' && masterIntake > 0) ||
-    (source === 'tank' && waterGal > 0)
-  
-  let P_system = 0
-  if (waterAvailable) {
-    const P_base = source === 'tank' 
-      ? IDLE_PUMP_DELTA_PSI 
-      : masterIntake + IDLE_PUMP_DELTA_PSI
-    P_system = P_base
-    if (governor.enabled) {
-      if (governor.mode === 'pressure') {
-        P_system = Math.min(400, Math.max(governor.setPsi, P_base))
-      }
-    }
-  }
-  
-  const displayPsi = discharge.open ? (discharge.valvePercent / 100) * P_system : 0
 
   const handleToggle = () => {
     setLine(discharge.id, { open: !discharge.open })
@@ -391,7 +338,7 @@ export function DischargeCard({ discharge }: DischargeCardProps) {
   return (
     <div className="puc-card">
       {/* Gauge */}
-      <LineAnalogGauge label={discharge.label} psi={displayPsi} />
+      <LineAnalogGauge label={discharge.label} psi={discharge.displayPsi} />
       
       {/* Flow Stats */}
       <div className="mt-3 space-y-1 text-center text-sm">
@@ -541,7 +488,7 @@ export function GovernorCard() {
 
   return (
     <div className="puc-card">
-      <h3 className="text-sm font-semibold mb-3 text-center opacity-80">GOVERNOR</h3>
+      <h3 className="text-base sm:text-lg lg:text-xl font-semibold tracking-wide uppercase mb-3 text-center opacity-80 drop-shadow-md">GOVERNOR</h3>
       
       {/* Mode Pills */}
       <div className="flex gap-2 mb-4">
@@ -642,10 +589,12 @@ export function IntakeCard() {
   const masterIntake = useStore(state => state.gauges.masterIntake)
   const setSource = useStore(state => state.setSource)
   const setIntakePsi = useStore(state => state.setIntakePsi)
+  const tankFillPct = useStore(state => state.tankFillPct)
+  const setTankFillPct = useStore(state => state.setTankFillPct)
 
   return (
     <div className="puc-card">
-      <h3 className="text-sm font-semibold mb-3 text-center opacity-80">SOURCE</h3>
+      <h3 className="text-base sm:text-lg lg:text-xl font-semibold tracking-wide uppercase mb-3 text-center opacity-80 drop-shadow-md">SOURCE</h3>
       
       {/* Source Toggle */}
       <div className="flex gap-2 mb-4">
@@ -673,7 +622,7 @@ export function IntakeCard() {
       
       {/* Hydrant Intake Control */}
       {source === 'hydrant' && (
-        <div>
+        <div className="mb-4">
           <label className="text-xs opacity-60">Hydrant Intake PSI</label>
           <input
             type="range"
@@ -689,6 +638,30 @@ export function IntakeCard() {
           </div>
           <div className="text-xs text-center opacity-60 mt-1">
             (Default: 50 PSI)
+          </div>
+        </div>
+      )}
+      
+      {/* Tank Fill / Recirculate Slider */}
+      {(source === 'tank' || source === 'hydrant') && (
+        <div className="mb-4">
+          <label className="text-xs opacity-60">Tank Fill / Recirculate</label>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="5"
+            value={tankFillPct}
+            onChange={(e) => setTankFillPct(Number(e.target.value))}
+            className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer mt-2 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500"
+          />
+          <div className="text-center text-lg font-bold tabular-nums mt-1">
+            {tankFillPct}%
+          </div>
+          <div className="text-xs text-center opacity-60 mt-2 leading-relaxed">
+            {source === 'tank' 
+              ? 'Recirculates through pump to cool; does not change tank level.'
+              : 'Fills tank; may reduce hydrant residual slightly if fully open.'}
           </div>
         </div>
       )}
@@ -718,10 +691,25 @@ export function LevelsCard() {
 
   const waterPct = (waterGal / waterCap) * 100
   const foamPct = (foamGal / foamCap) * 100
+  
+  // Level thresholds
+  const LEVEL_YELLOW = 0.66  // >66% green
+  const LEVEL_RED = 0.33     // 33-66% yellow, <33% red
+  
+  const waterFill = waterGal / waterCap
+  const foamFill = foamGal / foamCap
+  
+  const waterColor = waterFill > LEVEL_YELLOW ? 'bg-emerald-500'
+                   : waterFill > LEVEL_RED ? 'bg-amber-400'
+                   : 'bg-red-500'
+  
+  const foamColor = foamFill > LEVEL_YELLOW ? 'bg-emerald-500'
+                  : foamFill > LEVEL_RED ? 'bg-amber-400'
+                  : 'bg-red-500'
 
   return (
     <div className="puc-card">
-      <h3 className="text-sm font-semibold mb-3 text-center opacity-80">LEVELS</h3>
+      <h3 className="text-base sm:text-lg lg:text-xl font-semibold tracking-wide uppercase mb-3 text-center opacity-80 drop-shadow-md">LEVELS</h3>
       
       {/* Water */}
       <div className="mb-4">
@@ -729,9 +717,9 @@ export function LevelsCard() {
           <span className="text-sky-400">Water</span>
           <span className="tabular-nums">{Math.round(waterGal)} / {waterCap} gal</span>
         </div>
-        <div className="h-6 bg-white/10 rounded-full overflow-hidden">
+        <div className="h-6 bg-white/10 rounded-full overflow-hidden border border-white/20">
           <div 
-            className="h-full bg-sky-400 transition-all"
+            className={`h-full ${waterColor} transition-all shadow-inner`}
             style={{ width: `${waterPct}%` }}
           />
         </div>
@@ -744,9 +732,9 @@ export function LevelsCard() {
             <span className="text-pink-400">Foam</span>
             <span className="tabular-nums">{Math.round(foamGal)} / {foamCap} gal</span>
           </div>
-          <div className="h-6 bg-white/10 rounded-full overflow-hidden">
+          <div className="h-6 bg-white/10 rounded-full overflow-hidden border border-white/20">
             <div 
-              className="h-full bg-pink-400 transition-all"
+              className={`h-full ${foamColor} transition-all shadow-inner`}
               style={{ width: `${foamPct}%` }}
             />
           </div>
@@ -761,7 +749,7 @@ export function PumpDataCard() {
   
   return (
     <div className="puc-card">
-      <h3 className="text-sm font-semibold mb-3 text-center opacity-80">PUMP DATA</h3>
+      <h3 className="text-base sm:text-lg lg:text-xl font-semibold tracking-wide uppercase mb-3 text-center opacity-80 drop-shadow-md">PUMP DATA</h3>
       <div className="space-y-3">
         <div>
           <div className="text-xs opacity-60 text-center mb-1">TOTAL GPM Now</div>

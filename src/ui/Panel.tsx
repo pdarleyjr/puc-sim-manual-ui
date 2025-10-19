@@ -101,7 +101,7 @@ export function Panel() {
         {!pumpEngaged ? (
           /* Engage Screen */
           <div className="flex items-center justify-center h-full">
-            <div className="puc-card max-w-md w-full text-center p-8">
+            <div id="engage-card" className="puc-card max-w-md w-full text-center p-8">
               <h2 className="text-2xl font-bold mb-6">ENGAGE PUMP</h2>
               <p className="text-sm opacity-60 mb-8">
                 Select pump mode to begin manual operation
@@ -136,7 +136,7 @@ export function Panel() {
             {/* Left Column - Status, Source, Levels */}
             <section className="lg:col-span-2 space-y-3 sm:space-y-4">
               <div className="puc-card">
-                <h3 className="text-sm font-semibold mb-3 text-center opacity-80">STATUS</h3>
+                <h3 className="text-base sm:text-lg lg:text-xl font-semibold tracking-wide uppercase mb-3 text-center opacity-80 drop-shadow-md">STATUS</h3>
                 
                 <div className="space-y-2">
                   <div className={`p-3 rounded-lg text-center ${
@@ -168,14 +168,16 @@ export function Panel() {
                 </div>
               </div>
               
-              <IntakeCard />
+              <div id="source-card">
+                <IntakeCard />
+              </div>
               <LevelsCard />
             </section>
 
             {/* Center - Master Gauges & Discharges */}
             <section className="lg:col-span-8 space-y-4 sm:space-y-6">
               {/* Master Gauges */}
-              <div className="puc-card">
+              <div id="master-gauges" className="puc-card order-1 lg:order-none">
                 <h3 className="text-sm font-semibold mb-4 text-center opacity-80">MASTER GAUGES</h3>
                 <div className="flex flex-wrap justify-around items-center gap-4">
                   <AnalogGauge
@@ -204,9 +206,9 @@ export function Panel() {
               </div>
 
               {/* Discharge Cards Grid */}
-              <div>
+              <div className="order-3 lg:order-none">
                 <h3 className="text-sm font-semibold mb-3 opacity-80">DISCHARGES</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div id="discharges-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   <DischargeCard discharge={discharges.xlay1} />
                   <DischargeCard discharge={discharges.xlay2} />
                   <DischargeCard discharge={discharges.xlay3} />
@@ -218,8 +220,10 @@ export function Panel() {
             </section>
 
             {/* Right Column - Governor & Pump Data */}
-            <section className={`lg:col-span-2 space-y-3 sm:space-y-4 ${compactMode ? 'hidden lg:block' : ''}`}>
-              <GovernorCard />
+            <section className={`lg:col-span-2 space-y-3 sm:space-y-4 order-2 lg:order-none ${compactMode ? 'hidden lg:block' : ''}`}>
+              <div id="governor-card">
+                <GovernorCard />
+              </div>
               <PumpDataCard />
             </section>
           </div>

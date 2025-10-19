@@ -45,3 +45,7 @@ export const TIP_DIAMETERS = {
 export const CAVITATION_INTAKE_THRESHOLD = 2;   // psi - near-dry threshold
 export const CAVITATION_RPM_THRESHOLD = 1200;   // rpm - high demand threshold
 export const CAVITATION_DISCHARGE_THRESHOLD = 150; // psi - high demand threshold
+
+// Tank Fill / Recirculate constants
+export const FILL_QMAX_GPM = 250;                 // Max tank-fill flow when fully open (hydrant supplied)
+export const INTAKE_SAG_PSI_PER_GPM = 0.02;       // Intake sag per gpm of tank fill (hydrant only)

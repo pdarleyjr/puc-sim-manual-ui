@@ -16,6 +16,8 @@ import {
   K_MONITOR,
   K_PIPED,
   TIP_DIAMETERS,
+  FILL_QMAX_GPM,
+  INTAKE_SAG_PSI_PER_GPM,
 } from './constants'
 
 export type Source = 'none' | 'tank' | 'hydrant'
@@ -86,10 +88,12 @@ export interface Discharge {
   assignment: AssignmentConfig  // NEW: assignment configuration
   gpmNow: number
   gallonsThisEng: number
+  displayPsi: number      // Damped display value for gauge (cosmetic only)
 }
 
 export interface Gauges {
-  masterIntake: number      // -10..200, display clamps to 0..200 when hydrant
+  masterIntake: number      // -10..200, display clamps to 0..200 when hydrant (derived from masterIntakeBase - sag)
+  masterIntakeBase: number  // User's hydrant PSI control (before sag)
   masterDischarge: number   // 0..400 (highest open line)
   rpm: number               // 650..2200
   waterGal: number          // 0..720
@@ -118,6 +122,7 @@ export interface AppState {
   session: Session
   uiPrefs: UiPrefs
   lastRedlineCross: number  // timestamp of last redline crossing for edge detection
+  tankFillPct: number       // 0..100 (tank fill/recirculate slider)
 
   // Actions
   engagePump: (mode: 'water' | 'foam') => void
@@ -137,6 +142,7 @@ export interface AppState {
   startSession: () => void
   endSession: () => void
   setCompactMode: (on: boolean) => void
+  setTankFillPct: (pct: number) => void
 }
 
 // Compute P_base (hydrant intake + idle pump contribution)
@@ -270,6 +276,12 @@ function computeAssignmentFlow(P_line_at_panel: number, assignment: AssignmentCo
   }
 }
 
+// Damping helper for smooth gauge movement
+function damp(current: number, target: number, rate: number = 0.3): number {
+  const delta = target - current
+  return current + delta * rate
+}
+
 export const useStore = create<AppState>((set, get) => ({
   pumpEngaged: false,
   source: 'none',
@@ -290,7 +302,8 @@ export const useStore = create<AppState>((set, get) => ({
       lengthFt: LEN_CROSSLAY, 
       assignment: { type: 'handline_175_fog' },
       gpmNow: 0, 
-      gallonsThisEng: 0 
+      gallonsThisEng: 0,
+      displayPsi: 0
     },
     xlay2: { 
       id: 'xlay2', 
@@ -301,7 +314,8 @@ export const useStore = create<AppState>((set, get) => ({
       lengthFt: LEN_CROSSLAY, 
       assignment: { type: 'handline_175_fog' },
       gpmNow: 0, 
-      gallonsThisEng: 0 
+      gallonsThisEng: 0,
+      displayPsi: 0
     },
     xlay3: { 
       id: 'xlay3', 
@@ -312,7 +326,8 @@ export const useStore = create<AppState>((set, get) => ({
       lengthFt: LEN_CROSSLAY, 
       assignment: { type: 'handline_175_fog' },
       gpmNow: 0, 
-      gallonsThisEng: 0 
+      gallonsThisEng: 0,
+      displayPsi: 0
     },
     trashline: { 
       id: 'trashline', 
@@ -323,7 +338,8 @@ export const useStore = create<AppState>((set, get) => ({
       lengthFt: LEN_TRASHLINE, 
       assignment: { type: 'handline_175_fog' },
       gpmNow: 0, 
-      gallonsThisEng: 0 
+      gallonsThisEng: 0,
+      displayPsi: 0
     },
     twohalfA: { 
       id: 'twohalfA', 
@@ -334,7 +350,8 @@ export const useStore = create<AppState>((set, get) => ({
       lengthFt: LEN_TWOHALF_A, 
       assignment: { type: 'handline_175_fog' },
       gpmNow: 0, 
-      gallonsThisEng: 0 
+      gallonsThisEng: 0,
+      displayPsi: 0
     },
     twohalfB: { 
       id: 'twohalfB', 
@@ -345,7 +362,8 @@ export const useStore = create<AppState>((set, get) => ({
       lengthFt: LEN_TWOHALF_A, 
       assignment: { type: 'handline_175_fog' },
       gpmNow: 0, 
-      gallonsThisEng: 0 
+      gallonsThisEng: 0,
+      displayPsi: 0
     },
     twohalfC: { 
       id: 'twohalfC', 
@@ -356,7 +374,8 @@ export const useStore = create<AppState>((set, get) => ({
       lengthFt: LEN_TWOHALF_A, 
       assignment: { type: 'handline_175_fog' },
       gpmNow: 0, 
-      gallonsThisEng: 0 
+      gallonsThisEng: 0,
+      displayPsi: 0
     },
     twohalfD: { 
       id: 'twohalfD', 
@@ -367,7 +386,8 @@ export const useStore = create<AppState>((set, get) => ({
       lengthFt: LEN_TWOHALF_A, 
       assignment: { type: 'handline_175_fog' },
       gpmNow: 0, 
-      gallonsThisEng: 0 
+      gallonsThisEng: 0,
+      displayPsi: 0
     },
     deckgun: { 
       id: 'deckgun', 
@@ -378,11 +398,13 @@ export const useStore = create<AppState>((set, get) => ({
       lengthFt: 0, // Piped, no hose
       assignment: { type: 'deck_gun', tip: '1_1/2' },
       gpmNow: 0, 
-      gallonsThisEng: 0 
+      gallonsThisEng: 0,
+      displayPsi: 0
     },
   },
   gauges: {
     masterIntake: 0,
+    masterIntakeBase: 0,
     masterDischarge: 0,
     rpm: ENGINE_IDLE,
     waterGal: 720,
@@ -406,6 +428,7 @@ export const useStore = create<AppState>((set, get) => ({
     compactMode: false,
   },
   lastRedlineCross: 0,
+  tankFillPct: 0,
 
   engagePump: (mode) => {
     set({
@@ -445,7 +468,7 @@ export const useStore = create<AppState>((set, get) => ({
     const state = get()
     // Mutual exclusivity: clicking same source toggles to 'none'
     const newSource = state.source === s ? 'none' : s
-    const newIntake = newSource === 'hydrant' && state.gauges.masterIntake === 0 ? 50 : state.gauges.masterIntake
+    const newIntakeBase = newSource === 'hydrant' && state.gauges.masterIntakeBase === 0 ? 50 : state.gauges.masterIntakeBase
     
     get().log('SOURCE_CHANGE', { from: state.source, to: newSource })
     
@@ -453,7 +476,8 @@ export const useStore = create<AppState>((set, get) => ({
       source: newSource,
       gauges: {
         ...state.gauges,
-        masterIntake: newSource === 'tank' || newSource === 'none' ? 0 : newIntake,
+        masterIntakeBase: newSource === 'tank' || newSource === 'none' ? 0 : newIntakeBase,
+        masterIntake: newSource === 'tank' || newSource === 'none' ? 0 : newIntakeBase,
       },
     })
     get().recomputeMasters()
@@ -463,7 +487,7 @@ export const useStore = create<AppState>((set, get) => ({
     if (get().source === 'hydrant') {
       const clamped = Math.max(0, Math.min(200, psi))
       get().log('HYDRANT_PSI_CHANGE', { psi: clamped })
-      set({ gauges: { ...get().gauges, masterIntake: clamped } })
+      set({ gauges: { ...get().gauges, masterIntakeBase: clamped, masterIntake: clamped } })
       get().recomputeMasters()
     }
   },
@@ -613,6 +637,12 @@ export const useStore = create<AppState>((set, get) => ({
     set({ uiPrefs: { ...get().uiPrefs, compactMode: on } })
   },
 
+  setTankFillPct: (pct) => {
+    const clamped = Math.max(0, Math.min(100, pct))
+    get().log('TANK_FILL_CHANGE', { percent: clamped })
+    set({ tankFillPct: clamped })
+  },
+
   simTick: () => {
     const state = get()
     if (!state.pumpEngaged) return
@@ -620,6 +650,26 @@ export const useStore = create<AppState>((set, get) => ({
     const now = performance.now()
     const dtMs = state.lastSimTick > 0 ? now - state.lastSimTick : 100
     set({ lastSimTick: now })
+
+    // Tank Fill / Recirculate logic
+    const s = state.tankFillPct / 100
+    const Q_fill = s * (state.source === 'hydrant' ? FILL_QMAX_GPM : 50)
+    
+    // 1) Hydrant: fill the tank
+    let newWaterGal = state.gauges.waterGal
+    if (state.pumpEngaged && state.source === 'hydrant' && s > 0) {
+      newWaterGal = Math.min(
+        state.capacities.water,
+        state.gauges.waterGal + Q_fill * (dtMs / 60000)
+      )
+    }
+    
+    // 2) Hydrant: reduce intake ("sag") slightly
+    let displayedIntake = state.gauges.masterIntakeBase
+    if (state.source === 'hydrant') {
+      const sag = Q_fill * INTAKE_SAG_PSI_PER_GPM
+      displayedIntake = Math.max(0, state.gauges.masterIntakeBase - sag)
+    }
 
     const P_system = computeSystemPressure(state)
 
@@ -632,7 +682,7 @@ export const useStore = create<AppState>((set, get) => ({
     const TEMP_MAX = 240
 
     const isWaterAvailable =
-      (state.source === 'hydrant' && state.gauges.masterIntake > 0) ||
+      (state.source === 'hydrant' && displayedIntake > 0) ||
       (state.source === 'tank' && state.gauges.waterGal > 0)
 
     // Update pump temperature
@@ -674,11 +724,14 @@ export const useStore = create<AppState>((set, get) => ({
 
     for (const id of Object.keys(state.discharges) as DischargeId[]) {
       const d = updatedDischarges[id]
-      // Per-line pressure = valve% × system pressure
-      const P_line = d.open ? (d.valvePercent / 100) * P_system : 0
+      // Per-line pressure = valve% × system pressure (only when open)
+      const P_line_at_panel = d.open ? (d.valvePercent / 100) * P_system : 0
+      
+      // Apply damping to displayPsi for smooth gauge motion
+      d.displayPsi = damp(d.displayPsi, P_line_at_panel)
       
       // Use assignment-specific flow computation
-      const gpm = computeAssignmentFlow(P_line, d.assignment)
+      const gpm = computeAssignmentFlow(P_line_at_panel, d.assignment)
 
       // Tank empty logic: if on tank and water==0 → no flow
       const effectiveGpm = (state.source === 'tank' && state.gauges.waterGal <= 0) ? 0 : gpm
@@ -696,15 +749,19 @@ export const useStore = create<AppState>((set, get) => ({
     }
 
     // 3) Tank depletion (manual-only rule)
-    let newWaterGal = state.gauges.waterGal
     if (state.source === 'tank') {
-      newWaterGal = Math.max(0, state.gauges.waterGal - totalGpm * (dtMs / 60000))
+      newWaterGal = Math.max(0, newWaterGal - totalGpm * (dtMs / 60000))
     }
 
     set({
       discharges: updatedDischarges,
       totals: newTotals,
-      gauges: { ...state.gauges, waterGal: newWaterGal, pumpTempF: newPumpTempF },
+      gauges: { 
+        ...state.gauges, 
+        waterGal: newWaterGal, 
+        pumpTempF: newPumpTempF,
+        masterIntake: displayedIntake 
+      },
       warnings: newWarnings,
     })
   },
