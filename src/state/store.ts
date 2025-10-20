@@ -20,7 +20,6 @@ import {
   INTAKE_SAG_PSI_PER_GPM,
 } from './constants'
 import { initScenario, tickScenario, type ScenarioExecutor } from './scenarios'
-import { selectHydrantResiduals } from './selectors'
 
 export type Source = 'none' | 'tank' | 'hydrant'
 export type DischargeId = 'xlay1' | 'xlay2' | 'xlay3' | 'trashline' | 'twohalfA' | 'twohalfB' | 'twohalfC' | 'twohalfD' | 'deckgun'
@@ -42,7 +41,6 @@ export interface HydrantSupply {
   hoses: Record<HydrantOutlet, SupplyLeg>
   hydrantGaugeEnabled: boolean
   hydrantStaticPsi: number
-  hydrantResidualPsi: number
 }
 
 // Scenario Mode types
@@ -370,7 +368,6 @@ export const useStore = create<AppState>((set, get) => ({
     },
     hydrantGaugeEnabled: true,
     hydrantStaticPsi: 80,
-    hydrantResidualPsi: 80,
   },
   governor: {
     enabled: false,
@@ -810,14 +807,6 @@ export const useStore = create<AppState>((set, get) => ({
 
     // Update scenario clock and run scenario engine
     get().scenarioTick(dtMs)
-
-    // Update hydrant residual if on hydrant
-    if (state.source === 'hydrant') {
-      const { hydrantResidual } = selectHydrantResiduals(state)
-      set({
-        hydrant: { ...state.hydrant, hydrantResidualPsi: hydrantResidual }
-      })
-    }
 
     // Tank Fill / Recirculate logic
     const s = state.tankFillPct / 100
