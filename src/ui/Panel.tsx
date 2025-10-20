@@ -210,20 +210,20 @@ export function Panel() {
                       unit="PSI"
                     />
                     {source === 'hydrant' && (
-                      <div className="mt-4 flex flex-col gap-1 text-xs">
-                        <div className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium ${
+                      <div className="mt-6 flex flex-col gap-2 text-xs">
+                        <div className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 font-medium ${
                           intakeBadge === 'green' ? 'bg-green-500/10 text-green-300 ring-1 ring-green-500/30' :
                           intakeBadge === 'amber' ? 'bg-yellow-500/10 text-yellow-300 ring-1 ring-yellow-500/30' :
                           'bg-red-500/10 text-red-300 ring-1 ring-red-500/30'
                         }`}>
-                          Pump: {Math.round(engineIntake)} psi
+                          <span className="whitespace-nowrap">Pump: {Math.round(engineIntake)} psi</span>
                         </div>
-                        <div className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium ${
+                        <div className={`inline-flex items-center justify-center rounded-full px-2.5 py-1 font-medium ${
                           hydrantBadge === 'green' ? 'bg-green-500/10 text-green-300 ring-1 ring-green-500/30' :
                           hydrantBadge === 'amber' ? 'bg-yellow-500/10 text-yellow-300 ring-1 ring-yellow-500/30' :
                           'bg-red-500/10 text-red-300 ring-1 ring-red-500/30'
                         }`}>
-                          Hydrant: {Math.round(hydrantResidual)} psi
+                          <span className="whitespace-nowrap">Hydrant: {Math.round(hydrantResidual)} psi</span>
                         </div>
                       </div>
                     )}

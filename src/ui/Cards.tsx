@@ -612,18 +612,19 @@ export function IntakeCard() {
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => setSource('tank')}
-          className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all ${
+          className={`flex-1 px-3 py-2 rounded-lg font-semibold transition-all text-sm ${
             source === 'tank'
               ? 'bg-sky-500 text-white'
               : 'bg-white/10 text-white/60 hover:bg-white/20'
           }`}
         >
-          Tank-to-Pump
+          <div>Tank-</div>
+          <div>to-Pump</div>
         </button>
         <button
           onClick={handleHydrantClick}
           disabled={scenario.status === 'running' && !scenario.locks.hydrantSelectable}
-          className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all ${
+          className={`flex-1 px-3 py-2 rounded-lg font-semibold transition-all text-sm ${
             source === 'hydrant'
               ? 'bg-sky-500 text-white'
               : scenario.status === 'running' && !scenario.locks.hydrantSelectable
