@@ -11,7 +11,8 @@ export function HydrantSupplyCard() {
   
   const hydrantResidual = useStore(s => selectHydrantResiduals(s).hydrantResidual)
   const hydrantBadge = useStore(s => selectResidualBadges(s).hydrantBadge)
-  const advice = useStore(s => selectHydrantAdvice(s))
+  const suggestAddLDH = useStore(s => selectHydrantAdvice(s).suggestAddLDH)
+  const suggestUpsizeTo5 = useStore(s => selectHydrantAdvice(s).suggestUpsizeTo5)
   
   // Only show when source is hydrant
   if (source !== 'hydrant') return null
@@ -223,14 +224,14 @@ export function HydrantSupplyCard() {
       </div>
       
       {/* Advisor Chips */}
-      {(advice.suggestAddLDH || advice.suggestUpsizeTo5) && (
+      {(suggestAddLDH || suggestUpsizeTo5) && (
         <div className="mt-4 space-y-2">
-          {advice.suggestAddLDH && (
+          {suggestAddLDH && (
             <div className="p-2 bg-sky-500/10 border border-sky-500/30 rounded text-xs text-sky-300">
               💡 Add side <strong>5″</strong> to raise intake
             </div>
           )}
-          {advice.suggestUpsizeTo5 && (
+          {suggestUpsizeTo5 && (
             <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded text-xs text-amber-300">
               💡 Upsize 3″ leg(s) to <strong>5″</strong> for high flow
             </div>
