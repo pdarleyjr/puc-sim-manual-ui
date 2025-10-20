@@ -44,12 +44,12 @@ export function HydrantSupplyCard() {
       {/* Tap Mode Selector */}
       <div className="mb-4">
         <label className="text-xs opacity-60 mb-2 block">Tap Configuration</label>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           {(['single', 'double', 'triple'] as TapMode[]).map(mode => (
             <button
               key={mode}
               onClick={() => handleTapModeChange(mode)}
-              className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-all capitalize ${
+              className={`flex-1 px-2 py-2 rounded-lg font-semibold transition-all capitalize text-xs ${
                 hydrant.tapMode === mode
                   ? 'bg-sky-500 text-white'
                   : 'bg-white/10 text-white/60 hover:bg-white/20'

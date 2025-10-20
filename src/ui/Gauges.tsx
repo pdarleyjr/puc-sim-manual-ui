@@ -138,7 +138,7 @@ export function LineAnalogGauge({ label, psi, min = 0, max = 400 }: LineAnalogGa
   const angle = START + pct * SWEEP + jitter
 
   return (
-    <div className="relative w-48 h-48 mx-auto">
+    <div className="relative w-56 h-56 mx-auto">
       {/* Face plate image - will be added later */}
       <img 
         src={`${import.meta.env.BASE_URL}assets/crosslay_analog_gauge.png`}
@@ -171,12 +171,12 @@ export function LineAnalogGauge({ label, psi, min = 0, max = 400 }: LineAnalogGa
       </svg>
       
       {/* Digital readout below */}
-      <div className="absolute -bottom-6 w-full text-center text-sm font-semibold tabular-nums">
+      <div className="absolute -bottom-7 w-full text-center text-sm font-semibold tabular-nums">
         {Math.round(displayPsi)} PSI
       </div>
       
       {/* Label above */}
-      <div className="absolute -top-6 w-full text-center text-[10px] tracking-wider opacity-80">
+      <div className="absolute -top-7 w-full text-center text-[10px] tracking-wider opacity-80">
         {label}
       </div>
     </div>
