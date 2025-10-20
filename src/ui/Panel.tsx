@@ -44,14 +44,18 @@ export function Panel() {
   const [afterActionOpen, setAfterActionOpen] = useState(false)
   
   const pumpEngaged = useStore(state => state.pumpEngaged)
-  const discharges = useStore(state => state.discharges)
-  const gauges = useStore(state => state.gauges)
+  const xlay1 = useStore(state => state.discharges.xlay1)
+  const xlay2 = useStore(state => state.discharges.xlay2)
+  const xlay3 = useStore(state => state.discharges.xlay3)
+  const trashline = useStore(state => state.discharges.trashline)
+  const gaugesMasterDischarge = useStore(state => state.gauges.masterDischarge)
+  const gaugesRpm = useStore(state => state.gauges.rpm)
   const source = useStore(state => state.source)
   const compactMode = useStore(state => state.uiPrefs.compactMode)
   const disengagePump = useStore(state => state.disengagePump)
   const tickRpm = useStore(state => state.tickRpm)
   const simTick = useStore(state => state.simTick)
-  const scenario = useStore(state => state.scenario)
+  const scenarioStatus = useStore(state => state.scenario.status)
 
   const intakeDisplay = useStore(selectMasterIntakeDisplay)
   const hydrantResidual = useStore(s => selectHydrantResiduals(s).hydrantResidual)
@@ -88,7 +92,7 @@ export function Panel() {
   }, [disengagePump])
 
   // Check if in scenario mode
-  const isScenarioMode = scenario.status !== 'idle'
+  const isScenarioMode = scenarioStatus !== 'idle'
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -226,7 +230,7 @@ export function Panel() {
                   </div>
                   <AnalogGauge
                     label="DISCHARGE"
-                    value={gauges.masterDischarge}
+                    value={gaugesMasterDischarge}
                     min={0}
                     max={400}
                     unit="PSI"
@@ -234,7 +238,7 @@ export function Panel() {
                   />
                   <AnalogGauge
                     label="ENGINE"
-                    value={gauges.rpm}
+                    value={gaugesRpm}
                     min={0}
                     max={2200}
                     unit="RPM"
@@ -248,10 +252,10 @@ export function Panel() {
                 <div className="relative">
                   <span id="anchor-discharges" className="absolute left-4 -top-2 h-0 w-0" aria-hidden="true" />
                   <div id="discharges-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                    <DischargeCard discharge={discharges.xlay1} />
-                    <DischargeCard discharge={discharges.xlay2} />
-                    <DischargeCard discharge={discharges.xlay3} />
-                    <DischargeCard discharge={discharges.trashline} />
+                    <DischargeCard discharge={xlay1} />
+                    <DischargeCard discharge={xlay2} />
+                    <DischargeCard discharge={xlay3} />
+                    <DischargeCard discharge={trashline} />
                     <div className="relative">
                       <span id="anchor-twohalf" className="absolute left-1/2 -top-2 h-0 w-0" aria-hidden="true" />
                       <TwoHalfMultiplexer />
