@@ -609,22 +609,21 @@ export function IntakeCard() {
       <h3 className="text-base sm:text-lg lg:text-xl font-semibold tracking-wide uppercase mb-3 text-center opacity-80 drop-shadow-md">SOURCE</h3>
       
       {/* Source Toggle */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-col gap-2 mb-4">
         <button
           onClick={() => setSource('tank')}
-          className={`flex-1 px-3 py-2 rounded-lg font-semibold transition-all text-sm ${
+          className={`w-full px-3 py-2 rounded-lg font-semibold transition-all text-sm ${
             source === 'tank'
               ? 'bg-sky-500 text-white'
               : 'bg-white/10 text-white/60 hover:bg-white/20'
           }`}
         >
-          <div>Tank-</div>
-          <div>to-Pump</div>
+          Tank-to-Pump
         </button>
         <button
           onClick={handleHydrantClick}
           disabled={scenario.status === 'running' && !scenario.locks.hydrantSelectable}
-          className={`flex-1 px-3 py-2 rounded-lg font-semibold transition-all text-sm ${
+          className={`w-full px-3 py-2 rounded-lg font-semibold transition-all text-sm ${
             source === 'hydrant'
               ? 'bg-sky-500 text-white'
               : scenario.status === 'running' && !scenario.locks.hydrantSelectable
