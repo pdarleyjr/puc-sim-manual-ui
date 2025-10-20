@@ -225,9 +225,10 @@ export function LineAnalogGauge({
         <circle cx={cx} cy={cy} r="5" fill="white" />
       </svg>
       
-      {/* Digital readout below */}
-      <div className="absolute -bottom-6 w-full text-center text-sm font-semibold tabular-nums">
-        {Math.round(displayPsi)} PSI
+      {/* Digital PSI readout directly below gauge */}
+      <div className="absolute -bottom-8 w-full text-center">
+        <div className="text-2xl font-bold tabular-nums text-white">{Math.round(displayPsi)}</div>
+        <div className="text-[10px] opacity-60 uppercase tracking-wider">PSI</div>
       </div>
       
       {/* Label above */}

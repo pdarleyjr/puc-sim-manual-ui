@@ -867,15 +867,15 @@ export const useStore = create<AppState>((set, get) => ({
 
     // 1) Per-line flows
     let totalGpm = 0
-    const updatedDischarges = { ...state.discharges }
+    const updatedDischarges = {} as Record<DischargeId, Discharge>
 
     for (const id of Object.keys(state.discharges) as DischargeId[]) {
-      const d = updatedDischarges[id]
+      const d = state.discharges[id]
       // Per-line pressure = valve% × system pressure (only when open)
       const P_line_at_panel = d.open ? (d.valvePercent / 100) * P_system : 0
       
       // Apply damping to displayPsi for smooth gauge motion
-      d.displayPsi = damp(d.displayPsi, P_line_at_panel)
+      const newDisplayPsi = damp(d.displayPsi, P_line_at_panel)
       
       // Use assignment-specific flow computation
       const gpm = computeAssignmentFlow(P_line_at_panel, d.assignment)
@@ -883,8 +883,13 @@ export const useStore = create<AppState>((set, get) => ({
       // Tank empty logic: if on tank and water==0 → no flow
       const effectiveGpm = (state.source === 'tank' && state.gauges.waterGal <= 0) ? 0 : gpm
 
-      d.gpmNow = effectiveGpm
-      d.gallonsThisEng += effectiveGpm * (dtMs / 60000)   // GPM × minutes
+      // Create new discharge object (immutable update)
+      updatedDischarges[id] = {
+        ...d,
+        displayPsi: newDisplayPsi,
+        gpmNow: effectiveGpm,
+        gallonsThisEng: d.gallonsThisEng + effectiveGpm * (dtMs / 60000)
+      }
 
       totalGpm += effectiveGpm
     }

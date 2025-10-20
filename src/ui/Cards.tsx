@@ -236,7 +236,7 @@ export function DeckGunCard() {
       />
       
       {/* Flow Stats */}
-      <div className="mt-3 space-y-1 text-center text-sm">
+      <div className="mt-12 space-y-1 text-center text-sm">
         <div className="flex justify-between items-center px-4">
           <span className="text-xs opacity-60">GPM Now:</span>
           <span className="font-bold tabular-nums text-emerald-400">{Math.round(discharge.gpmNow)}</span>
@@ -351,7 +351,7 @@ export function DischargeCard({ discharge }: DischargeCardProps) {
       />
       
       {/* Flow Stats */}
-      <div className="mt-3 space-y-1 text-center text-sm">
+      <div className="mt-12 space-y-1 text-center text-sm">
         <div className="flex justify-between items-center px-4">
           <span className="text-xs opacity-60">GPM Now:</span>
           <span className="font-bold tabular-nums text-emerald-400">{Math.round(discharge.gpmNow)}</span>
