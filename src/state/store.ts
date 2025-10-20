@@ -203,7 +203,6 @@ export interface AppState {
   setHydrantTapMode: (mode: TapMode) => void
   setHydrantLeg: (outlet: HydrantOutlet, patch: Partial<SupplyLeg>) => void
   setHydrantGauge: (enabled: boolean) => void
-  normalizeHydrantConnections: () => void
   
   // Scenario Mode actions
   scenarioEnter: () => void
@@ -745,13 +744,24 @@ export const useStore = create<AppState>((set, get) => ({
   // Hydrant supply actions
   setHydrantTapMode: (mode) => {
     get().log('HYDRANT_TAP_MODE', { mode })
-    set((st) => ({
-      hydrant: {
-        ...st.hydrant,
-        tapMode: mode,
+    set((st) => {
+      const connected = {
+        steamer: true,
+        sideA: mode !== 'single',
+        sideB: mode === 'triple',
       }
-    }))
-    get().normalizeHydrantConnections()
+      return {
+        hydrant: {
+          ...st.hydrant,
+          tapMode: mode,
+          hoses: {
+            steamer: { ...st.hydrant.hoses.steamer, connected: connected.steamer },
+            sideA:   { ...st.hydrant.hoses.sideA,   connected: connected.sideA },
+            sideB:   { ...st.hydrant.hoses.sideB,   connected: connected.sideB },
+          },
+        },
+      }
+    })
   },
 
   setHydrantLeg: (outlet, patch) => {
@@ -769,26 +779,6 @@ export const useStore = create<AppState>((set, get) => ({
       },
     }))
   },
-
-  normalizeHydrantConnections: () =>
-    set((st) => {
-      const { tapMode, hoses } = st.hydrant
-      const connected = {
-        steamer: true,
-        sideA: tapMode !== 'single',
-        sideB: tapMode === 'triple',
-      }
-      return {
-        hydrant: {
-          ...st.hydrant,
-          hoses: {
-            steamer: { ...hoses.steamer, connected: connected.steamer },
-            sideA:   { ...hoses.sideA,   connected: connected.sideA },
-            sideB:   { ...hoses.sideB,   connected: connected.sideB },
-          },
-        },
-      }
-    }),
 
   setHydrantGauge: (enabled) => {
     get().log('HYDRANT_GAUGE_TOGGLE', { enabled })
