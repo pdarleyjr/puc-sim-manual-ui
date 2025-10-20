@@ -9,9 +9,9 @@ export function HydrantSupplyCard() {
   const setHydrantLeg = useStore(state => state.setHydrantLeg)
   const setHydrantGauge = useStore(state => state.setHydrantGauge)
   
-  const { hydrantResidual } = useStore(selectHydrantResiduals)
-  const { hydrantBadge } = useStore(selectResidualBadges)
-  const advice = useStore(selectHydrantAdvice)
+  const hydrantResidual = useStore(s => selectHydrantResiduals(s).hydrantResidual)
+  const hydrantBadge = useStore(s => selectResidualBadges(s).hydrantBadge)
+  const advice = useStore(s => selectHydrantAdvice(s))
   
   // Only show when source is hydrant
   if (source !== 'hydrant') return null

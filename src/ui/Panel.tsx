@@ -54,8 +54,10 @@ export function Panel() {
   const scenario = useStore(state => state.scenario)
 
   const intakeDisplay = useStore(selectMasterIntakeDisplay)
-  const { hydrantResidual, engineIntake } = useStore(selectHydrantResiduals)
-  const { hydrantBadge, intakeBadge } = useStore(selectResidualBadges)
+  const hydrantResidual = useStore(s => selectHydrantResiduals(s).hydrantResidual)
+  const engineIntake = useStore(s => selectHydrantResiduals(s).engineIntake)
+  const hydrantBadge = useStore(s => selectResidualBadges(s).hydrantBadge)
+  const intakeBadge = useStore(s => selectResidualBadges(s).intakeBadge)
 
   // Engine audio hook
   useEngineAudio()
