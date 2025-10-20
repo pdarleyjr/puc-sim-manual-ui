@@ -105,9 +105,24 @@ interface LineAnalogGaugeProps {
   psi: number
   min?: number
   max?: number
+  bezelSrc?: string
+  cal?: {
+    cx?: number      // SVG center X, default 100
+    cy?: number      // SVG center Y, default 100
+    r?: number       // dial radius in SVG units, default 60
+    margin?: number  // safety margin (needle stops short), default 2
+    debug?: boolean  // show debug ring
+  }
 }
 
-export function LineAnalogGauge({ label, psi, min = 0, max = 400 }: LineAnalogGaugeProps) {
+export function LineAnalogGauge({ 
+  label, 
+  psi, 
+  min = 0, 
+  max = 400,
+  bezelSrc,
+  cal = {}
+}: LineAnalogGaugeProps) {
   const [displayPsi, setDisplayPsi] = useState(psi)
   const cavitating = useStore(selectCavitating)
   
@@ -137,11 +152,28 @@ export function LineAnalogGauge({ label, psi, min = 0, max = 400 }: LineAnalogGa
   const pct = Math.max(0, Math.min(1, (displayPsi - min) / (max - min)))
   const angle = START + pct * SWEEP + jitter
 
+  // Extract calibration values with defaults
+  const cx = cal.cx ?? 100
+  const cy = cal.cy ?? 100
+  const r = cal.r ?? 60
+  const margin = cal.margin ?? 2
+  const debug = cal.debug ?? false
+  
+  // Derive needle length from radius (stops short by margin)
+  const needleLength = Math.max(0, r - margin)
+  
+  // Calculate needle endpoint
+  const x2 = cx + needleLength * Math.cos((Math.PI / 180) * angle)
+  const y2 = cy + needleLength * Math.sin((Math.PI / 180) * angle)
+
+  // Determine bezel source
+  const bezelPath = bezelSrc ?? `${import.meta.env.BASE_URL}assets/crosslay_analog_gauge.png`
+
   return (
-    <div className="relative w-44 h-44 mx-auto">
-      {/* Face plate image - will be added later */}
+    <div className="relative w-44 h-44 mx-auto select-none">
+      {/* Bezel PNG layer */}
       <img 
-        src={`${import.meta.env.BASE_URL}assets/crosslay_analog_gauge.png`}
+        src={bezelPath}
         alt="" 
         className="absolute inset-0 w-full h-full object-contain pointer-events-none"
         onError={(e) => {
@@ -151,23 +183,37 @@ export function LineAnalogGauge({ label, psi, min = 0, max = 400 }: LineAnalogGa
       />
       
       {/* SVG needle overlay */}
-      <svg viewBox="0 0 200 200" className="absolute inset-0 w-full h-full">
+      <svg viewBox="0 0 200 200" className="absolute inset-0 w-full h-full" aria-hidden="true">
         {/* Fallback dial if image not loaded */}
-        <circle cx="100" cy="100" r="70" stroke="white" strokeWidth="2" fill="none" opacity="0.1" />
+        <circle cx={cx} cy={cy} r="70" stroke="white" strokeWidth="2" fill="none" opacity="0.1" />
         
-        {/* Center pivot */}
-        <circle cx="100" cy="100" r="5" fill="white" />
+        {/* Debug ring - shows exact dial radius for calibration */}
+        {debug && (
+          <circle 
+            cx={cx} 
+            cy={cy} 
+            r={r} 
+            fill="none" 
+            stroke="magenta" 
+            strokeWidth="2" 
+            strokeDasharray="4 4" 
+            opacity="0.8"
+          />
+        )}
         
-        {/* Needle - shortened to 50 units to fit within gauge face */}
+        {/* Needle */}
         <line 
-          x1="100" 
-          y1="100"
-          x2={100 + 50 * Math.cos((Math.PI / 180) * angle)}
-          y2={100 + 50 * Math.sin((Math.PI / 180) * angle)}
+          x1={cx} 
+          y1={cy}
+          x2={x2}
+          y2={y2}
           stroke="white"
           strokeWidth="4" 
           strokeLinecap="round"
         />
+        
+        {/* Center pivot cap */}
+        <circle cx={cx} cy={cy} r="5" fill="white" />
       </svg>
       
       {/* Digital readout below */}

@@ -228,7 +228,11 @@ export function DeckGunCard() {
   return (
     <div className="puc-card">
       {/* Gauge */}
-      <LineAnalogGauge label={discharge.label} psi={discharge.displayPsi} />
+      <LineAnalogGauge 
+        label={discharge.label} 
+        psi={discharge.displayPsi}
+        cal={{ cx: 100, cy: 100, r: 58, margin: 3, debug: false }}
+      />
       
       {/* Flow Stats */}
       <div className="mt-3 space-y-1 text-center text-sm">
@@ -338,7 +342,11 @@ export function DischargeCard({ discharge }: DischargeCardProps) {
   return (
     <div className="puc-card">
       {/* Gauge */}
-      <LineAnalogGauge label={discharge.label} psi={discharge.displayPsi} />
+      <LineAnalogGauge 
+        label={discharge.label} 
+        psi={discharge.displayPsi}
+        cal={{ cx: 100, cy: 100, r: 58, margin: 3, debug: false }}
+      />
       
       {/* Flow Stats */}
       <div className="mt-3 space-y-1 text-center text-sm">
