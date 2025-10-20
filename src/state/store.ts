@@ -20,15 +20,39 @@ import {
   INTAKE_SAG_PSI_PER_GPM,
 } from './constants'
 import { initScenario, tickScenario, type ScenarioExecutor } from './scenarios'
+import { selectHydrantResiduals } from './selectors'
 
 export type Source = 'none' | 'tank' | 'hydrant'
 export type DischargeId = 'xlay1' | 'xlay2' | 'xlay3' | 'trashline' | 'twohalfA' | 'twohalfB' | 'twohalfC' | 'twohalfD' | 'deckgun'
 export type GovernorMode = 'pressure' | 'rpm'
 
+// Hydrant supply types
+export type HoseSizeSupply = '3' | '5'
+export type HydrantOutlet = 'steamer' | 'sideA' | 'sideB'
+export type TapMode = 'single' | 'double' | 'triple'
+
+export interface SupplyLeg {
+  size: HoseSizeSupply
+  lengthFt: number
+  connected: boolean
+}
+
+export interface HydrantSupply {
+  tapMode: TapMode
+  hoses: Record<HydrantOutlet, SupplyLeg>
+  hydrantGaugeEnabled: boolean
+  hydrantStaticPsi: number
+  hydrantResidualPsi: number
+}
+
 // Scenario Mode types
 export type ScenarioId = 'residential_one_xlay' | 'residential_with_exposure'
 export type ScenarioStatus = 'idle' | 'running' | 'passed' | 'failed' | 'aborted'
 export type ScenarioUnit = 'E1' | 'E2' | 'E3' | 'L1' | 'L3' | 'E4'
+
+export interface TestHooks {
+  Q_total_override?: number  // test only
+}
 
 export interface ScenarioClock {
   t0: number        // ms epoch when started
@@ -140,6 +164,7 @@ export interface AppState {
   pumpEngaged: boolean
   source: Source
   foamEnabled: boolean
+  hydrant: HydrantSupply
   governor: GovernorState
   discharges: Record<DischargeId, Discharge>
   gauges: Gauges
@@ -154,6 +179,7 @@ export interface AppState {
   lastRedlineCross: number  // timestamp of last redline crossing for edge detection
   tankFillPct: number       // 0..100 (tank fill/recirculate slider)
   scenario: ScenarioCtx      // Scenario Mode state
+  __test?: TestHooks         // Test-only hooks (NODE_ENV === 'test')
 
   // Actions
   engagePump: (mode: 'water' | 'foam') => void
@@ -174,6 +200,12 @@ export interface AppState {
   endSession: () => void
   setCompactMode: (on: boolean) => void
   setTankFillPct: (pct: number) => void
+  
+  // Hydrant supply actions
+  setHydrantTapMode: (mode: TapMode) => void
+  setHydrantLeg: (outlet: HydrantOutlet, patch: Partial<SupplyLeg>) => void
+  setHydrantGauge: (enabled: boolean) => void
+  normalizeHydrantConnections: () => void
   
   // Scenario Mode actions
   scenarioEnter: () => void
@@ -329,6 +361,17 @@ export const useStore = create<AppState>((set, get) => ({
   pumpEngaged: false,
   source: 'none',
   foamEnabled: false,
+  hydrant: {
+    tapMode: 'single',
+    hoses: {
+      steamer: { size: '5', lengthFt: 100, connected: true },
+      sideA: { size: '5', lengthFt: 100, connected: false },
+      sideB: { size: '5', lengthFt: 100, connected: false },
+    },
+    hydrantGaugeEnabled: true,
+    hydrantStaticPsi: 80,
+    hydrantResidualPsi: 80,
+  },
   governor: {
     enabled: false,
     mode: 'pressure',
@@ -702,6 +745,61 @@ export const useStore = create<AppState>((set, get) => ({
     set({ tankFillPct: clamped })
   },
 
+  // Hydrant supply actions
+  setHydrantTapMode: (mode) => {
+    get().log('HYDRANT_TAP_MODE', { mode })
+    set((st) => ({
+      hydrant: {
+        ...st.hydrant,
+        tapMode: mode,
+      }
+    }))
+    get().normalizeHydrantConnections()
+  },
+
+  setHydrantLeg: (outlet, patch) => {
+    get().log('HYDRANT_LEG_CHANGE', { outlet, ...patch })
+    set((st) => ({
+      hydrant: {
+        ...st.hydrant,
+        hoses: {
+          ...st.hydrant.hoses,
+          [outlet]: {
+            ...st.hydrant.hoses[outlet],
+            ...patch,
+          },
+        },
+      },
+    }))
+  },
+
+  normalizeHydrantConnections: () =>
+    set((st) => {
+      const { tapMode, hoses } = st.hydrant
+      const connected = {
+        steamer: true,
+        sideA: tapMode !== 'single',
+        sideB: tapMode === 'triple',
+      }
+      return {
+        hydrant: {
+          ...st.hydrant,
+          hoses: {
+            steamer: { ...hoses.steamer, connected: connected.steamer },
+            sideA:   { ...hoses.sideA,   connected: connected.sideA },
+            sideB:   { ...hoses.sideB,   connected: connected.sideB },
+          },
+        },
+      }
+    }),
+
+  setHydrantGauge: (enabled) => {
+    get().log('HYDRANT_GAUGE_TOGGLE', { enabled })
+    set({
+      hydrant: { ...get().hydrant, hydrantGaugeEnabled: enabled }
+    })
+  },
+
   simTick: () => {
     const state = get()
     if (!state.pumpEngaged) return
@@ -712,6 +810,14 @@ export const useStore = create<AppState>((set, get) => ({
 
     // Update scenario clock and run scenario engine
     get().scenarioTick(dtMs)
+
+    // Update hydrant residual if on hydrant
+    if (state.source === 'hydrant') {
+      const { hydrantResidual } = selectHydrantResiduals(state)
+      set({
+        hydrant: { ...state.hydrant, hydrantResidualPsi: hydrantResidual }
+      })
+    }
 
     // Tank Fill / Recirculate logic
     const s = state.tankFillPct / 100

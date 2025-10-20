@@ -49,3 +49,16 @@ export const CAVITATION_DISCHARGE_THRESHOLD = 150; // psi - high demand threshol
 // Tank Fill / Recirculate constants
 export const FILL_QMAX_GPM = 250;                 // Max tank-fill flow when fully open (hydrant supplied)
 export const INTAKE_SAG_PSI_PER_GPM = 0.02;       // Intake sag per gpm of tank fill (hydrant only)
+
+// Supply hose friction (5″ LDH and 3″)
+export const K_SUPPLY_5IN = 6.5e-6;               // psi/(gpm^2); ≈26 psi per 100' @ 2000 gpm
+export const K_SUPPLY_3IN = 4.55e-5;               // psi/(gpm^2); ≈7x the 5" loss
+
+// Intake plumbing loss (Q² model, not constant)
+export const K_INTAKE_PLUMB = 6.4e-6;            // psi/(gpm^2); ~26 psi at 2000 gpm (reduced 5% for multi-leg headroom)
+
+// Hydrant body losses (small constant)
+export const LOSS_HYDRANT_BODY = 2;               // psi (internal hydrant valve/body losses)
+
+// Flow split geometry factor (steamer weight for 70/30 split)
+export const F_STEAMER_WEIGHT = 2.3;              // Geometry factor for steamer advantage

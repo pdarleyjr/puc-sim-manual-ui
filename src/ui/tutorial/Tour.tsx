@@ -204,3 +204,80 @@ export function startLineConfigTour() {
 export function startTour() {
   startOverviewTour()
 }
+
+// Hydrant Supply Mini-Tour (4 steps)
+export function startHydrantMiniTour() {
+  const tour = new Shepherd.Tour({
+    defaultStepOptions: {
+      cancelIcon: { enabled: true },
+      scrollTo: { behavior: 'smooth', block: 'center' },
+      classes: 'shadow-xl rounded-2xl ring-1 ring-white/10',
+      arrow: true,
+      canClickTarget: false,
+    },
+    useModalOverlay: true,
+  })
+
+  tour.addStep({
+    id: 'hydrant-1',
+    text: 'Dress the hydrant. Choose Single / Double / Triple. Supply options in this lab are 3″ or 5″ only.',
+    attachTo: { element: '#anchor-hydrant-card', on: isMobile ? 'bottom-start' : 'right-start' },
+    buttons: [
+      {
+        text: 'Next',
+        action: tour.next,
+      },
+    ],
+  })
+
+  tour.addStep({
+    id: 'hydrant-2',
+    text: 'Use 5″ Storz on the steamer. Add a 5″ side line to raise pump intake at higher flows.',
+    attachTo: { element: '#anchor-hydrant-card', on: isMobile ? 'bottom-start' : 'right-start' },
+    buttons: [
+      {
+        text: 'Back',
+        action: tour.back,
+      },
+      {
+        text: 'Next',
+        action: tour.next,
+      },
+    ],
+  })
+
+  tour.addStep({
+    id: 'hydrant-3',
+    text: 'Two numbers: Hydrant main vs Pump intake. Keep Hydrant ≥20 psi; aim for Pump intake ≥20 psi.',
+    attachTo: { element: '#anchor-master', on: isMobile ? 'top-start' : 'right-start' },
+    buttons: [
+      {
+        text: 'Back',
+        action: tour.back,
+      },
+      {
+        text: 'Next',
+        action: tour.next,
+      },
+    ],
+  })
+
+  tour.addStep({
+    id: 'hydrant-4',
+    text: '3″ has higher friction loss. Upsize to 5″ or add another 5″ side to improve intake.',
+    attachTo: { element: '#anchor-hydrant-card', on: isMobile ? 'bottom-start' : 'right-start' },
+    buttons: [
+      {
+        text: 'Back',
+        action: tour.back,
+      },
+      {
+        text: 'Finish',
+        action: tour.complete,
+      },
+    ],
+  })
+
+  tour.start()
+  return tour
+}

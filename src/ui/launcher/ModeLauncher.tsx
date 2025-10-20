@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { ChevronRight, Gauge, Radio, Droplets } from 'lucide-react'
+import { ChevronRight, Gauge, Radio, Droplets, Droplet, AlertTriangle } from 'lucide-react'
 import { useLauncher, type LauncherMode } from '../../state/launcher'
 import type { ScenarioId } from '../../state/store'
 
@@ -37,8 +37,7 @@ function ModeCard({ mode, icon, title, description, selected, onSelect, inputRef
       />
       
       <div className="flex items-start gap-4">
-        <div className={`
-          flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-colors
+        <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-colors
           ${selected ? 'bg-emerald-500 text-white' : 'bg-white/10 text-white/60'}`}
         >
           {icon}
@@ -75,6 +74,8 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
   const panelRef = useRef<HTMLInputElement>(null)
   const scenarioRef = useRef<HTMLInputElement>(null)
   const foamRef = useRef<HTMLInputElement>(null)
+  const hydrantLabRef = useRef<HTMLInputElement>(null)
+  const waterSupplyRef = useRef<HTMLInputElement>(null)
   
   // Load saved preference on mount
   useEffect(() => {
@@ -86,8 +87,8 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
     const handleKeyDown = (e: KeyboardEvent) => {
       if (step !== 1) return
       
-      const modes: LauncherMode[] = ['panel', 'scenario', 'foam']
-      const refs = [panelRef, scenarioRef, foamRef]
+      const modes: LauncherMode[] = ['panel', 'scenario', 'foam', 'hydrant_lab', 'water_supply_troubleshooting']
+      const refs = [panelRef, scenarioRef, foamRef, hydrantLabRef, waterSupplyRef]
       const currentIndex = modes.indexOf(chosenMode)
       
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
@@ -187,6 +188,26 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
                 onSelect={() => setMode('foam')}
                 inputRef={foamRef}
               />
+              
+              <ModeCard
+                mode="hydrant_lab"
+                icon={<Droplet size={24} />}
+                title="Hydrant Connection Lab"
+                description="Practice hydrant hookup: single/double/triple tap, 3″ or 5″ supply hoses."
+                selected={chosenMode === 'hydrant_lab'}
+                onSelect={() => setMode('hydrant_lab')}
+                inputRef={hydrantLabRef}
+              />
+              
+              <ModeCard
+                mode="water_supply_troubleshooting"
+                icon={<AlertTriangle size={24} />}
+                title="Water-Supply Troubleshooting"
+                description="High-flow scenario with inadequate supply. Fix intake pressure ≥20 psi."
+                selected={chosenMode === 'water_supply_troubleshooting'}
+                onSelect={() => setMode('water_supply_troubleshooting')}
+                inputRef={waterSupplyRef}
+              />
             </div>
             
             {/* Preference checkbox */}
@@ -199,7 +220,14 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
                   className="w-5 h-5 rounded bg-white/10 border-white/20 checked:bg-emerald-500 checked:border-emerald-500 focus:ring-2 focus:ring-emerald-500/50"
                 />
                 <span className="text-sm opacity-70 group-hover:opacity-100 transition-opacity">
-                  Always start with {chosenMode === 'panel' ? 'Panel Only' : chosenMode === 'scenario' ? 'Scenario Mode' : 'Foam System'} on this device
+                  Always start with {
+                    chosenMode === 'panel' ? 'Panel Only' : 
+                    chosenMode === 'scenario' ? 'Scenario Mode' : 
+                    chosenMode === 'foam' ? 'Foam System' :
+                    chosenMode === 'hydrant_lab' ? 'Hydrant Connection Lab' :
+                    chosenMode === 'water_supply_troubleshooting' ? 'Water-Supply Troubleshooting' :
+                    'this mode'
+                  } on this device
                 </span>
               </label>
             </div>

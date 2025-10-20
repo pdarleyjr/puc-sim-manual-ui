@@ -9,6 +9,8 @@ import { DischargeCard, IntakeCard, LevelsCard, PumpDataCard, GovernorCard, TwoH
 import { ScenarioHud } from './ScenarioHud'
 import { useEngineAudio } from '../audio/useEngineAudio'
 import { useState } from 'react'
+import { selectMasterIntakeDisplay, selectHydrantResiduals, selectResidualBadges } from '../state/selectors'
+import { HydrantSupplyCard } from './HydrantSupplyCard'
 
 function WarningBanner() {
   const warnings = useStore(state => state.warnings)
@@ -44,11 +46,16 @@ export function Panel() {
   const pumpEngaged = useStore(state => state.pumpEngaged)
   const discharges = useStore(state => state.discharges)
   const gauges = useStore(state => state.gauges)
+  const source = useStore(state => state.source)
   const compactMode = useStore(state => state.uiPrefs.compactMode)
   const disengagePump = useStore(state => state.disengagePump)
   const tickRpm = useStore(state => state.tickRpm)
   const simTick = useStore(state => state.simTick)
   const scenario = useStore(state => state.scenario)
+
+  const intakeDisplay = useStore(selectMasterIntakeDisplay)
+  const { hydrantResidual, engineIntake } = useStore(selectHydrantResiduals)
+  const { hydrantBadge, intakeBadge } = useStore(selectResidualBadges)
 
   // Engine audio hook
   useEngineAudio()
@@ -170,6 +177,11 @@ export function Panel() {
                 </div>
               </div>
               
+              <div className="relative" id="hydrant-card-wrap">
+                <span id="anchor-hydrant-card" className="absolute -right-2 top-4 h-0 w-0" aria-hidden="true" />
+                <HydrantSupplyCard />
+              </div>
+              
               <div className="relative" id="source-card">
                 <span id="anchor-source" className="absolute -right-2 top-4 h-0 w-0" aria-hidden="true" />
                 <IntakeCard />
@@ -180,15 +192,36 @@ export function Panel() {
             <section className="order-4 lg:order-none lg:col-span-8 space-y-4 sm:space-y-6">
               {/* Master Gauges */}
               <div id="master-gauges" className="puc-card">
+                <span id="anchor-master" className="absolute -right-2 top-4 h-0 w-0" aria-hidden="true" />
                 <h3 className="text-sm font-semibold mb-4 text-center opacity-80">MASTER GAUGES</h3>
                 <div className="flex flex-wrap justify-around items-center gap-4">
-                  <AnalogGauge
-                    label="INTAKE"
-                    value={gauges.masterIntake}
-                    min={-10}
-                    max={200}
-                    unit="PSI"
-                  />
+                  <div className="relative">
+                    <AnalogGauge
+                      label="INTAKE"
+                      value={intakeDisplay}
+                      min={-10}
+                      max={200}
+                      unit="PSI"
+                    />
+                    {source === 'hydrant' && (
+                      <div className="mt-4 flex flex-col gap-1 text-xs">
+                        <div className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium ${
+                          intakeBadge === 'green' ? 'bg-green-500/10 text-green-300 ring-1 ring-green-500/30' :
+                          intakeBadge === 'amber' ? 'bg-yellow-500/10 text-yellow-300 ring-1 ring-yellow-500/30' :
+                          'bg-red-500/10 text-red-300 ring-1 ring-red-500/30'
+                        }`}>
+                          Pump: {Math.round(engineIntake)} psi
+                        </div>
+                        <div className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium ${
+                          hydrantBadge === 'green' ? 'bg-green-500/10 text-green-300 ring-1 ring-green-500/30' :
+                          hydrantBadge === 'amber' ? 'bg-yellow-500/10 text-yellow-300 ring-1 ring-yellow-500/30' :
+                          'bg-red-500/10 text-red-300 ring-1 ring-red-500/30'
+                        }`}>
+                          Hydrant: {Math.round(hydrantResidual)} psi
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <AnalogGauge
                     label="DISCHARGE"
                     value={gauges.masterDischarge}
