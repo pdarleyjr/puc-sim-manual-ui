@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId } from 'react'
 import { useStore } from '../state/store'
 import { selectCavitating } from '../state/selectors'
 
@@ -125,6 +125,7 @@ export function LineAnalogGauge({
 }: LineAnalogGaugeProps) {
   const [displayPsi, setDisplayPsi] = useState(psi)
   const cavitating = useStore(selectCavitating)
+  const clipId = useId() // Unique ID for clipPath
   
   // Damping effect
   useEffect(() => {
@@ -155,8 +156,8 @@ export function LineAnalogGauge({
   // Extract calibration values with defaults
   const cx = cal.cx ?? 100
   const cy = cal.cy ?? 100
-  const r = cal.r ?? 60
-  const margin = cal.margin ?? 2
+  const r = cal.r ?? 54  // Reduced from 60 to account for PNG padding
+  const margin = cal.margin ?? 3
   const debug = cal.debug ?? false
   
   // Derive needle length from radius (stops short by margin)
@@ -170,7 +171,7 @@ export function LineAnalogGauge({
   const bezelPath = bezelSrc ?? `${import.meta.env.BASE_URL}assets/crosslay_analog_gauge.png`
 
   return (
-    <div className="relative w-44 h-44 mx-auto select-none">
+    <div className="relative aspect-square w-44 mx-auto select-none">
       {/* Bezel PNG layer */}
       <img 
         src={bezelPath}
@@ -184,6 +185,12 @@ export function LineAnalogGauge({
       
       {/* SVG needle overlay */}
       <svg viewBox="0 0 200 200" className="absolute inset-0 w-full h-full" aria-hidden="true">
+        <defs>
+          <clipPath id={clipId}>
+            <circle cx={cx} cy={cy} r={r} />
+          </clipPath>
+        </defs>
+
         {/* Fallback dial if image not loaded */}
         <circle cx={cx} cy={cy} r="70" stroke="white" strokeWidth="2" fill="none" opacity="0.1" />
         
@@ -201,16 +208,18 @@ export function LineAnalogGauge({
           />
         )}
         
-        {/* Needle */}
-        <line 
-          x1={cx} 
-          y1={cy}
-          x2={x2}
-          y2={y2}
-          stroke="white"
-          strokeWidth="4" 
-          strokeLinecap="round"
-        />
+        {/* Needle - CLIPPED to dial */}
+        <g clipPath={`url(#${clipId})`}>
+          <line 
+            x1={cx} 
+            y1={cy}
+            x2={x2}
+            y2={y2}
+            stroke="white"
+            strokeWidth="4" 
+            strokeLinecap="round"
+          />
+        </g>
         
         {/* Center pivot cap */}
         <circle cx={cx} cy={cy} r="5" fill="white" />
