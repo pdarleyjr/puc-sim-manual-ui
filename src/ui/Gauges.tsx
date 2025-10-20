@@ -156,8 +156,8 @@ export function LineAnalogGauge({
   // Extract calibration values with defaults
   const cx = cal.cx ?? 100
   const cy = cal.cy ?? 100
-  const r = cal.r ?? 54  // Reduced from 60 to account for PNG padding
-  const margin = cal.margin ?? 3
+  const r = cal.r ?? 60  // Spec-compliant: 2000px PNG with 600px radius = 60% of 200 SVG units
+  const margin = cal.margin ?? 2
   const debug = cal.debug ?? false
   
   // Derive needle length from radius (stops short by margin)

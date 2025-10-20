@@ -231,7 +231,8 @@ export function DeckGunCard() {
       <LineAnalogGauge 
         label={discharge.label} 
         psi={discharge.displayPsi}
-        cal={{ cx: 100, cy: 100, r: 54, margin: 3, debug: false }}
+        bezelSrc={`${import.meta.env.BASE_URL}assets/new_gauge.png`}
+        cal={{ cx: 100, cy: 100, r: 60, margin: 2, debug: false }}
       />
       
       {/* Flow Stats */}
@@ -345,7 +346,8 @@ export function DischargeCard({ discharge }: DischargeCardProps) {
       <LineAnalogGauge 
         label={discharge.label} 
         psi={discharge.displayPsi}
-        cal={{ cx: 100, cy: 100, r: 54, margin: 3, debug: false }}
+        bezelSrc={`${import.meta.env.BASE_URL}assets/new_gauge.png`}
+        cal={{ cx: 100, cy: 100, r: 60, margin: 2, debug: false }}
       />
       
       {/* Flow Stats */}
