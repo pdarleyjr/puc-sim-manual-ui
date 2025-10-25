@@ -9,8 +9,9 @@ import { DischargeCard, IntakeCard, LevelsCard, PumpDataCard, GovernorCard, TwoH
 import { ScenarioHud } from './ScenarioHud'
 import { useEngineAudio } from '../audio/useEngineAudio'
 import { useState } from 'react'
-import { selectMasterIntakeDisplay, selectHydrantResiduals, selectResidualBadges } from '../state/selectors'
+import { selectMasterIntakeDisplay, selectHydrantResiduals, selectResidualBadges, useMonitorNumbers } from '../state/selectors'
 import { HydrantSupplyCard } from './HydrantSupplyCard'
+import MonitorOutputMeter from '../components/hydrant/MonitorOutputMeter'
 
 function WarningBanner() {
   const warnings = useStore(state => state.warnings)
@@ -62,6 +63,8 @@ export function Panel() {
   const engineIntake = useStore(s => selectHydrantResiduals(s).engineIntake)
   const hydrantBadge = useStore(s => selectResidualBadges(s).hydrantBadge)
   const intakeBadge = useStore(s => selectResidualBadges(s).intakeBadge)
+  
+  const { flowNowGpm, truckMaxGpm, residualPsi } = useMonitorNumbers()
 
   // Engine audio hook
   useEngineAudio()
@@ -187,6 +190,15 @@ export function Panel() {
                 <span id="anchor-hydrant-card" className="absolute -right-2 top-4 h-0 w-0" aria-hidden="true" />
                 <HydrantSupplyCard />
               </div>
+              
+              {/* Water Output Meter - only shown when hydrant is active */}
+              {source === 'hydrant' && (
+                <MonitorOutputMeter
+                  flowNowGpm={flowNowGpm}
+                  truckMaxGpm={truckMaxGpm}
+                  residualPsi={residualPsi}
+                />
+              )}
               
               <div className="relative" id="source-card">
                 <span id="anchor-source" className="absolute -right-2 top-4 h-0 w-0" aria-hidden="true" />
