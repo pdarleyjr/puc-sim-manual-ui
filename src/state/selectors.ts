@@ -154,3 +154,93 @@ export const selectMasterIntakeDisplay = (st: AppState) => {
   }
   return st.gauges.masterIntake
 }
+
+// Monitor output meter selector with shallow comparison to prevent infinite loops
+import { useStore } from './store'
+import { useShallow } from 'zustand/react/shallow'
+import {
+  computeMonitorMetrics,
+  type SupplyLeg as HydraulicsSupplyLeg
+} from '../lib/hydraulics'
+
+export function useMonitorNumbers() {
+  return useStore(
+    useShallow((st) => {
+      // Only compute when hydrant is active
+      if (st.source !== 'hydrant') {
+        return { flowNowGpm: 0, truckMaxGpm: 0, residualPsi: 0 }
+      }
+
+      // Get current total discharge flow
+      const totalGpm = selectTotalDischargeGpm(st)
+      
+      // Get flow split distribution
+      const split = selectHydrantSplit(st)
+      
+      // Build supply legs array with assigned flows from split
+      const legs: HydraulicsSupplyLeg[] = []
+      const { hoses } = st.hydrant
+      
+      // Steamer leg (always connected)
+      if (hoses.steamer.connected) {
+        const qSteamer = totalGpm * split.steamer
+        legs.push({
+          diameterIn: hoses.steamer.size === '5' ? 5 : 3,
+          lengthFt: hoses.steamer.lengthFt,
+          gpm: qSteamer,
+          appliancesPsi: LOSS_HYDRANT_BODY
+        })
+      }
+      
+      // Side A leg (connected in double/triple)
+      if (hoses.sideA.connected) {
+        const qSideA = totalGpm * (split.perLeg.sideA ?? 0)
+        legs.push({
+          diameterIn: hoses.sideA.size === '5' ? 5 : 3,
+          lengthFt: hoses.sideA.lengthFt,
+          gpm: qSideA,
+          appliancesPsi: 3  // Adapter loss for 2.5″→Storz
+        })
+      }
+      
+      // Side B leg (connected in triple only)
+      if (hoses.sideB.connected) {
+        const qSideB = totalGpm * (split.perLeg.sideB ?? 0)
+        legs.push({
+          diameterIn: hoses.sideB.size === '5' ? 5 : 3,
+          lengthFt: hoses.sideB.lengthFt,
+          gpm: qSideB,
+          appliancesPsi: 3  // Adapter loss for 2.5″→Storz
+        })
+      }
+      
+      // Monitor configuration
+      const tipIn = 1.5  // 1.5″ deck gun tip
+      const pdpPsi = st.gauges.masterDischarge
+      const deviceLossPsi = 25  // Monitor appliance + piping losses
+      
+      // Pump specifications
+      const ratedGpm = 1500  // Typical pumper rating
+      
+      // Get hydrant residual from existing calculation
+      const { hydrantResidual } = selectHydrantResiduals(st)
+      
+      // Use the complete metrics function
+      const metrics = computeMonitorMetrics(
+        legs,
+        tipIn,
+        pdpPsi,
+        deviceLossPsi,
+        hydrantResidual,
+        ratedGpm,
+        undefined  // Optional: could add AFF_20 from hydrant test data
+      )
+      
+      return {
+        flowNowGpm: metrics.flowNowGpm,
+        truckMaxGpm: metrics.truckMaxGpm,
+        residualPsi: metrics.residualMainPsi
+      }
+    })
+  )
+}
