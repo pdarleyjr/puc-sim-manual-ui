@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Panel } from '../ui/Panel'
 import { ModeLauncher } from '../ui/launcher/ModeLauncher'
+import { HydrantLabScreen } from '../features/hydrant-lab/HydrantLabScreen'
 import { useStore } from '../state/store'
 import type { LauncherMode } from '../state/launcher'
 import type { ScenarioId } from '../state/store'
@@ -8,6 +9,7 @@ import { startOverviewTour } from '../ui/tutorial/Tour'
 
 function App() {
   const [showLauncher, setShowLauncher] = useState(true)
+  const [activeMode, setActiveMode] = useState<LauncherMode | null>(null)
   const [firstVisit, setFirstVisit] = useState(false)
   
   const engagePump = useStore(state => state.engagePump)
@@ -31,6 +33,7 @@ function App() {
   
   const handleEnterPanel = (mode: LauncherMode, scenario?: ScenarioId) => {
     setShowLauncher(false)
+    setActiveMode(mode)
     
     // Handle mode-specific setup
     if (mode === 'foam') {
@@ -53,32 +56,8 @@ function App() {
         }, 100)
       }, 100)
     } else if (mode === 'hydrant_lab') {
-      // Hydrant Connection Lab: pump disengaged, hydrant@80psi, steamer 5"×100'
-      setTimeout(() => {
-        setSource('none')
-        setHydrantTapMode('single')
-        setHydrantLeg('steamer', { size: '5', lengthFt: 100, connected: true })
-        setHydrantLeg('sideA', { size: '5', lengthFt: 100, connected: false })
-        setHydrantLeg('sideB', { size: '5', lengthFt: 100, connected: false })
-        setIntakePsi(80)
-      }, 100)
-    } else if (mode === 'water_supply_troubleshooting') {
-      // Water-Supply Troubleshooting: preload high flow, single 5", goal: raise intake≥20
-      setTimeout(() => {
-        engagePump('water')
-        setTimeout(() => {
-          setSource('hydrant')
-          setIntakePsi(80)
-          setHydrantTapMode('single')
-          setHydrantLeg('steamer', { size: '5', lengthFt: 150, connected: true })
-          setHydrantLeg('sideA', { size: '5', lengthFt: 100, connected: false })
-          setHydrantLeg('sideB', { size: '5', lengthFt: 100, connected: false })
-          // Preload deck gun (closed but configured)
-          setLine('deckgun', { assignment: { type: 'deck_gun', tip: '1_1/2' } })
-          setGovernorMode('pressure')
-          setGovernorSetPsi(150)
-        }, 100)
-      }, 100)
+      // Hydrant Connection Lab: independent state management
+      // No setup needed - the lab has its own store
     } else if (mode === 'panel') {
       // Panel only - show overview tour on first visit
       if (firstVisit) {
@@ -91,6 +70,10 @@ function App() {
   
   if (showLauncher) {
     return <ModeLauncher onEnter={handleEnterPanel} />
+  }
+  
+  if (activeMode === 'hydrant_lab') {
+    return <HydrantLabScreen />
   }
   
   return <Panel />

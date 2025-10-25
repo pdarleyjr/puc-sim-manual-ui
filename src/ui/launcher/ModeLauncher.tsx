@@ -75,7 +75,6 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
   const scenarioRef = useRef<HTMLInputElement>(null)
   const foamRef = useRef<HTMLInputElement>(null)
   const hydrantLabRef = useRef<HTMLInputElement>(null)
-  const waterSupplyRef = useRef<HTMLInputElement>(null)
   
   // Load saved preference on mount
   useEffect(() => {
@@ -87,8 +86,8 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
     const handleKeyDown = (e: KeyboardEvent) => {
       if (step !== 1) return
       
-      const modes: LauncherMode[] = ['panel', 'scenario', 'foam', 'hydrant_lab', 'water_supply_troubleshooting']
-      const refs = [panelRef, scenarioRef, foamRef, hydrantLabRef, waterSupplyRef]
+      const modes: LauncherMode[] = ['panel', 'scenario', 'foam', 'hydrant_lab']
+      const refs = [panelRef, scenarioRef, foamRef, hydrantLabRef]
       const currentIndex = modes.indexOf(chosenMode)
       
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
@@ -193,20 +192,10 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
                 mode="hydrant_lab"
                 icon={<Droplet size={24} />}
                 title="Hydrant Connection Lab"
-                description="Practice hydrant hookup: single/double/triple tap, 3″ or 5″ supply hoses."
+                description="Practice hydrant hookup: single/double/triple tap, 3″ or 5″ supply, HAV boost. Includes troubleshooting scenarios."
                 selected={chosenMode === 'hydrant_lab'}
                 onSelect={() => setMode('hydrant_lab')}
                 inputRef={hydrantLabRef}
-              />
-              
-              <ModeCard
-                mode="water_supply_troubleshooting"
-                icon={<AlertTriangle size={24} />}
-                title="Water-Supply Troubleshooting"
-                description="High-flow scenario with inadequate supply. Fix intake pressure ≥20 psi."
-                selected={chosenMode === 'water_supply_troubleshooting'}
-                onSelect={() => setMode('water_supply_troubleshooting')}
-                inputRef={waterSupplyRef}
               />
             </div>
             
@@ -225,7 +214,6 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
                     chosenMode === 'scenario' ? 'Scenario Mode' : 
                     chosenMode === 'foam' ? 'Foam System' :
                     chosenMode === 'hydrant_lab' ? 'Hydrant Connection Lab' :
-                    chosenMode === 'water_supply_troubleshooting' ? 'Water-Supply Troubleshooting' :
                     'this mode'
                   } on this device
                 </span>
