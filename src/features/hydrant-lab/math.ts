@@ -3,7 +3,7 @@ import { nozzleSmoothBoreGpm, pumpCurveMaxGpm } from '../../lib/hydraulics'
 // FL coefficients per AI_AGENT_TECHNICAL_GUIDE.md and NFPA/IFSTA reference tables
 const C_5IN = 0.025  // 5" LDH - field-calibrated
 const C_3IN = 0.8    // 3" hose per technical guide Table 3.2
-const C_175IN = 15.5 // 1.75" hose per technical guide Table 3.2
+// const C_175IN = 15.5 // 1.75" hose per technical guide Table 3.2 - for future discharge calculations
 const APPLIANCE_MS = 25  // Master stream device loss (per guide section 3.1)
 const ADAPTER_SIDE_5IN = 3  // 2.5" to Storz adapter on side ports
 
@@ -86,7 +86,6 @@ export function solveHydrantSystem(s: {
   // Start with estimate based on static pressure
   // Good hydrant at 50 psi can supply 2000+ GPM through single 5" steamer
   const baseFlowPer5in = availableDrop * 28  // ~1400 GPM at 50 psi
-  const baseFlowPer3in = availableDrop * 10  // ~500 GPM at 50 psi
   
   // Apply flow split ratios (70/30 rule)
   if (steamerLeg) {
