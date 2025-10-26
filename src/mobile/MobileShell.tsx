@@ -18,9 +18,6 @@ interface MobileShellProps {
 }
 
 export default function MobileShell({ mode }: MobileShellProps) {
-  const isMobile = typeof window !== 'undefined' && 
-    (window.innerWidth <= 1024 || new URLSearchParams(location.search).get('m') === '1')
-  
   // Initialize viewport units and keyboard detection
   useViewportUnits()
   useKeyboard()
@@ -32,8 +29,6 @@ export default function MobileShell({ mode }: MobileShellProps) {
   const [activeTab, setActiveTab] = useState<string>(
     mode === 'hydrant_lab' ? 'ports' : 'supply'
   )
-  
-  if (!isMobile) return null
   
   // Render appropriate page component based on active tab
   const renderContent = () => {
