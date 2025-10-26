@@ -44,20 +44,6 @@ export function flPsiPerLeg(
 }
 
 /**
- * Calculate line resistance coefficient
- * Higher resistance = less flow for given pressure
- * Based on Hazen-Williams: R ∝ C × L / d^4.87
- */
-function lineResistance(diameterIn: number, lengthFt: number, extraPsi: number): number {
-  const C = diameterIn === 5 ? C_5IN : C_3IN
-  const L = lengthFt / 100
-  // Resistance factor - higher = more resistance
-  // For 5" at 100ft: R ≈ 0.025 * 1 = 0.025
-  // For 3" at 100ft: R ≈ 0.8 * 1 = 0.8 (32x more resistance!)
-  return C * L + extraPsi / 100
-}
-
-/**
  * Calculate hydrant main valve capacity based on static pressure
  * Based on 5.25" main valve (21.65 in² area)
  * Using empirical data: 80 psi static → ~2700 GPM max (at 30 psi residual)
@@ -117,9 +103,6 @@ export function solveHydrantSystem(s: {
 
   // NFPA 291 constraint: hydrant main residual floor at 20 psi
   const HYDRANT_MAIN_FLOOR = 20
-  
-  // Cavitation warning threshold for intake (can go below 20, but warn near 0)
-  const INTAKE_WARNING_THRESHOLD = 0
   
   // HAV boost (only on steamer in boost mode)
   const havBoostPsi = s.hav.enabled && s.hav.mode === 'boost' ? s.hav.boostPsi : 0
