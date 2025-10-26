@@ -102,6 +102,22 @@ Flow ratings are determined at a 20 psi residual main pressure.
   - ~**30%** of total flow travels through the side port line.
 - **Impact:** This 30% flow diversion reduces friction loss in the main steamer line by approximately **50%**. This is the primary reason for the significant rise in residual intake pressure at the pumper.
 
+**CRITICAL IMPLEMENTATION NOTE:**
+The 70/30 split is NOT a pre-allocated ratio. It emerges naturally from the physics of line resistance:
+- 5" LDH has coefficient C = 0.025 per 100 ft
+- 3" hose has coefficient C = 0.8 per 100 ft (32x more resistance!)
+- Flow through each leg: Q ∝ √(ΔP / R) where R = C × L
+- When all ports use 5" LDH, steamer naturally carries ~70% due to larger port area (16.45 in² vs 5.20 in²)
+- When side ports use 3" hose, they provide minimal flow increase due to high resistance
+
+**Simulator Implementation:**
+1. Calculate resistance for each leg: R = C × L + adapter losses
+2. Total parallel resistance: 1/Rtotal = Σ(1/Ri)
+3. Solve iteratively for flow considering pressure drop: Q = √(ΔP / Rtotal) × scaling
+4. Apply hydrant main valve limit (~2000-2700 GPM depending on static pressure)
+5. Apply pump governor limit (NFPA 1911 curve based on PDP)
+6. Distribute flow proportionally based on conductance (1/R)
+
 ### 4.2. Test Data Highlights (Flowing 2,000 GPM from a single hydrant)
 
 | Configuration | Pumper Flow (GPM) | Residual Intake (psi) | Hydrant Pressure (psi) | Delta (psi) | Notes |
@@ -111,6 +127,13 @@ Flow ratings are determined at a 20 psi residual main pressure.
 | **Double Tap** (2x 5" lines) | 2,000 | **40** | 52 | 12 | **60% increase in residual intake pressure.** |
 | **Triple Tap** (3x 5" lines) | 2,000 | **45** | 52 | 7 | Additional 12.5% increase over double tap. |
 | **Extreme Flow Triple Tap**| 2,700 | 15 | 30 | 15 | Operator can safely go below 20 psi intake if hydrant pressure is monitored and remains > 20 psi. |
+
+**Key Observations:**
+- Using 2.5" hose on side port provides ZERO benefit (friction loss negates any flow increase)
+- Using 5" LDH on side port increases intake pressure by 60% at same flow
+- Maximum flow limited by 5.25" hydrant main valve (~2500-2700 GPM)
+- Pump rating (1500 GPM from draft) does NOT limit flow when hydrant-supplied
+- Governor and cavitation are the pump-side limits
 
 ### 4.3. Hydrant Pressure Boosting Procedure (Using Hydrant Assist Valve)
 

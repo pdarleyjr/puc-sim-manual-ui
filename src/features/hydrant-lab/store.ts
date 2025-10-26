@@ -401,6 +401,13 @@ function dischargeFrictionLoss(
 
 /**
  * Compute discharge line flows and pump limits
+ * 
+ * Key Facts:
+ * - Pump is rated at 1500 GPM from DRAFT
+ * - When hydrant-supplied, the HYDRANT provides the flow (up to ~2500 GPM)
+ * - Pump's job: boost pressure without cavitating
+ * - Cavitation occurs when intake pressure drops too low (< 10 psi)
+ * - Governor limits pump based on PDP and NFPA 1911 curve
  */
 function computeDischarges(
   lines: DischargeLine[],
@@ -464,17 +471,32 @@ function computeDischarges(
   
   // Check cavitation risk: intake pressure must be positive
   // Net Positive Suction Head (NPSH) requirement
-  const cavitating = intakePsi < 10  // Below 10 psi = cavitation risk
+  // When pumping at high PDP, need higher intake pressure
+  const minIntakeForPDP = pdpPsi > 200 ? 15 : pdpPsi > 150 ? 10 : 5
+  const cavitating = intakePsi < minIntakeForPDP
   
-  // Check governor limit
+  // Check governor limit (based on NFPA 1911 pump curve)
+  // At 150 psi: 100% of rated capacity = 1500 GPM
+  // At 200 psi: 70% of rated capacity = 1050 GPM
+  // At 250 psi: 50% of rated capacity = 750 GPM
   const pumpDraftRating = 1500
-  const governorLimit = pumpDraftRating * 2.0 * (governorPsi <= 150 ? 1.0 : governorPsi <= 200 ? 0.70 : 0.50)
+  let governorPercentage = 1.0
+  if (governorPsi > 250) {
+    governorPercentage = 0.50
+  } else if (governorPsi > 200) {
+    governorPercentage = 0.50 + (250 - governorPsi) / 250 * 0.20
+  } else if (governorPsi > 150) {
+    governorPercentage = 0.70 + (200 - governorPsi) / 200 * 0.30
+  }
+  const governorLimit = pumpDraftRating * governorPercentage
+  
   const governorLimited = totalDemand > governorLimit
   
   // Determine actual deliverable flow
+  // Limited by: supply from hydrant, governor, or cavitation
   let actualFlow = Math.min(totalDemand, supplyGpm, governorLimit)
   
-  // If cavitating, reduce flow significantly
+  // If cavitating, pump cannot maintain flow
   if (cavitating) {
     actualFlow = Math.min(actualFlow, supplyGpm * 0.5)
   }
