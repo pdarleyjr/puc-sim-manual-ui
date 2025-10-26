@@ -6,17 +6,13 @@ import { useViewportUnits } from './hooks/useViewportUnits'
 import { useKeyboard } from './hooks/useKeyboard'
 import './styles/mobile.css'
 
-// Placeholder page components - will render actual pages later
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="flex items-center justify-center h-full">
-      <div className="text-center p-8">
-        <h1 className="text-2xl font-bold mb-4">{title}</h1>
-        <p className="text-sm opacity-70">Page content coming soon</p>
-      </div>
-    </div>
-  )
-}
+// Import actual page components
+import PanelSupply from './pages/panel/PanelSupply'
+import PanelDischarges from './pages/panel/PanelDischarges'
+import PanelData from './pages/panel/PanelData'
+import HydrantPorts from './pages/hydrant/HydrantPorts'
+import HydrantHAV from './pages/hydrant/HydrantHAV'
+import HydrantAdvisor from './pages/hydrant/HydrantAdvisor'
 
 // Feature flag - can be disabled by setting VITE_MOBILE_APP_UI=false
 const MOBILE_UI_ENABLED = import.meta.env.VITE_MOBILE_APP_UI !== 'false'
@@ -85,30 +81,30 @@ export default function MobileShell({ mode }: MobileShellProps) {
   if (activePage === 'panel') {
     switch (activeTab) {
       case 'supply':
-        pageContent = <PlaceholderPage title="Supply Controls" />
+        pageContent = <PanelSupply />
         break
       case 'discharges':
-        pageContent = <PlaceholderPage title="Discharge Controls" />
+        pageContent = <PanelDischarges />
         break
       case 'data':
-        pageContent = <PlaceholderPage title="Panel Data" />
+        pageContent = <PanelData />
         break
       default:
-        pageContent = <PlaceholderPage title="Supply Controls" />
+        pageContent = <PanelSupply />
     }
   } else {
     switch (activeTab) {
       case 'ports':
-        pageContent = <PlaceholderPage title="Hydrant Ports" />
+        pageContent = <HydrantPorts />
         break
       case 'hav':
-        pageContent = <PlaceholderPage title="HAV Controls" />
+        pageContent = <HydrantHAV />
         break
       case 'advisor':
-        pageContent = <PlaceholderPage title="Connection Advisor" />
+        pageContent = <HydrantAdvisor />
         break
       default:
-        pageContent = <PlaceholderPage title="Hydrant Ports" />
+        pageContent = <HydrantPorts />
     }
   }
   
