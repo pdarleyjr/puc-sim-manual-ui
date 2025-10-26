@@ -14,13 +14,6 @@ function App() {
   
   const engagePump = useStore(state => state.engagePump)
   const scenarioStart = useStore(state => state.scenarioStart)
-  const setSource = useStore(state => state.setSource)
-  const setHydrantTapMode = useStore(state => state.setHydrantTapMode)
-  const setHydrantLeg = useStore(state => state.setHydrantLeg)
-  const setIntakePsi = useStore(state => state.setIntakePsi)
-  const setLine = useStore(state => state.setLine)
-  const setGovernorMode = useStore(state => state.setGovernorMode)
-  const setGovernorSetPsi = useStore(state => state.setGovernorSetPsi)
   
   // Check if this is first visit
   useEffect(() => {

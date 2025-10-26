@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { ChevronRight, Gauge, Radio, Droplets, Droplet, AlertTriangle } from 'lucide-react'
+import { ChevronRight, Gauge, Radio, Droplets, Droplet } from 'lucide-react'
 import { useLauncher, type LauncherMode } from '../../state/launcher'
 import type { ScenarioId } from '../../state/store'
 
