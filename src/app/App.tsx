@@ -76,8 +76,10 @@ function App() {
         {content}
       </div>
       
-      {/* Mobile layout (when conditions met) */}
-      <MobileShell mode={activeMode === 'hydrant_lab' ? 'hydrant_lab' : 'panel'} />
+      {/* Mobile layout (when conditions met and mode is selected) */}
+      {activeMode && (
+        <MobileShell mode={activeMode === 'hydrant_lab' ? 'hydrant_lab' : 'panel'} />
+      )}
     </>
   )
 }
