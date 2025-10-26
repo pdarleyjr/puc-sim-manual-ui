@@ -163,6 +163,34 @@ import {
   type SupplyLeg as HydraulicsSupplyLeg
 } from '../lib/hydraulics'
 
+// Mobile UI selectors
+export const selectTankPct = (st: AppState): number => {
+  return Math.round((st.gauges.waterGal / st.capacities.water) * 100)
+}
+
+export const selectFoamPct = (st: AppState): number => {
+  return Math.round((st.gauges.foamGal / st.capacities.foam) * 100)
+}
+
+export const selectMasterIntakePsi = (st: AppState): number => {
+  return Math.round(st.gauges.masterIntake)
+}
+
+export const selectMasterDischargePsi = (st: AppState): number => {
+  return Math.round(st.gauges.masterDischarge)
+}
+
+export const selectGovernor = (st: AppState): { mode: 'PDP' | 'RPM'; setpoint: number } => {
+  return {
+    mode: st.governor.mode === 'pressure' ? 'PDP' : 'RPM',
+    setpoint: st.governor.mode === 'pressure' ? st.governor.setPsi : st.governor.setRpm
+  }
+}
+
+export const selectActiveDischarges = (st: AppState) => {
+  return Object.values(st.discharges).filter(d => d.open)
+}
+
 export function useMonitorNumbers() {
   return useStore(
     useShallow((st) => {

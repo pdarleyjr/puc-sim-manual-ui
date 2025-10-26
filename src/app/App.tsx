@@ -6,6 +6,14 @@ import { useStore } from '../state/store'
 import type { LauncherMode } from '../state/launcher'
 import type { ScenarioId } from '../state/store'
 import { startOverviewTour } from '../ui/tutorial/Tour'
+import MobileFrame from '../mobile/MobileFrame'
+import { registerMobileToggles } from '../mobile/registerMobileToggles'
+import PanelTiles from '../mobile/tiles/PanelTiles'
+import HydrantTiles from '../mobile/tiles/HydrantTiles'
+
+// Register mobile tiles
+registerMobileToggles('panel', () => <PanelTiles />)
+registerMobileToggles('hydrant', () => <HydrantTiles />)
 
 function App() {
   const [showLauncher, setShowLauncher] = useState(true)
@@ -65,11 +73,22 @@ function App() {
     return <ModeLauncher onEnter={handleEnterPanel} />
   }
   
-  if (activeMode === 'hydrant_lab') {
-    return <HydrantLabScreen />
-  }
+  // Render mobile frame in parallel with desktop layout
+  const content = activeMode === 'hydrant_lab' ? <HydrantLabScreen /> : <Panel />
   
-  return <Panel />
+  return (
+    <>
+      {/* Desktop layout (default) */}
+      <div className="hidden md:block">
+        {content}
+      </div>
+      
+      {/* Mobile layout (when conditions met) */}
+      <MobileFrame>
+        {content}
+      </MobileFrame>
+    </>
+  )
 }
 
 export default App
