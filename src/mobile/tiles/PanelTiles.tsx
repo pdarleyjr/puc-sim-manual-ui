@@ -1,5 +1,4 @@
 import { useStore } from '../../state/store'
-import type { DischargeId } from '../../state/store'
 
 export default function PanelTiles() {
   const discharges = useStore(state => state.discharges)
