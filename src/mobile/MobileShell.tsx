@@ -50,16 +50,20 @@ export default function MobileShell({ mode }: MobileShellProps) {
   }
   
   return (
-    <div className="md:hidden fixed inset-0 bg-[#0f141a] text-slate-100 flex flex-col">
-      <TopHUD />
+    <div className="md:hidden mobile-fullscreen bg-[#0f141a] text-slate-100 flex flex-col">
+      <div className="mobile-hud">
+        <TopHUD />
+      </div>
       <div id="mobile-body" className="flex-1 overflow-hidden">
         {renderContent()}
       </div>
-      <RouteTabs 
-        page={activePage} 
-        activeTab={activeTab} 
-        onTabChange={setActiveTab}
-      />
+      <div className="mobile-nav">
+        <RouteTabs 
+          page={activePage} 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab}
+        />
+      </div>
     </div>
   )
 }

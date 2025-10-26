@@ -8,20 +8,22 @@ export function useViewportUnits() {
   useEffect(() => {
     const updateVH = () => {
       // Use visualViewport if available (better for mobile)
-      const vh = window.visualViewport?.height ?? window.innerHeight
-      document.documentElement.style.setProperty('--svh', `${vh}px`)
+      const hv = (window as any).visualViewport?.height ?? window.innerHeight
+      document.documentElement.style.setProperty('--svh', `${hv}px`)
     }
 
     // Initial set
     updateVH()
 
-    // Update on resize and visualViewport changes
+    // Update on resize, visualViewport changes, and orientation change
     window.addEventListener('resize', updateVH)
-    window.visualViewport?.addEventListener('resize', updateVH)
+    window.addEventListener('orientationchange', updateVH)
+    ;(window as any).visualViewport?.addEventListener('resize', updateVH)
     
     return () => {
       window.removeEventListener('resize', updateVH)
-      window.visualViewport?.removeEventListener('resize', updateVH)
+      window.removeEventListener('orientationchange', updateVH)
+      ;(window as any).visualViewport?.removeEventListener('resize', updateVH)
     }
   }, [])
 }

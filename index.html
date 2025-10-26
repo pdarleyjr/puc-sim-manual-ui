@@ -4,8 +4,16 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Pierce PUC Manual Fire Pump Simulator - Manual-only operation mode" />
-    <title>PUC Manual Simulator</title>
+    <title>Pump Operator Sim</title>
+    <!-- Error instrumentation for mobile debugging -->
+    <script>
+      window.addEventListener('error', function(e) {
+        console.error('[window.onerror]', e.error || e.message, e.filename, e.lineno);
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error('[unhandledrejection]', e.reason);
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -3,6 +3,20 @@
   --svh: 100svh; /* Small viewport height, updated by JS */
 }
 
+/* Support dynamic viewport height on modern browsers */
+@supports (height: 100dvh) {
+  :root {
+    --svh: 100dvh;
+  }
+}
+
+/* Full-screen mobile container */
+.mobile-fullscreen {
+  position: fixed;
+  inset: 0;
+  height: var(--svh);
+}
+
 /* Safe area bottom padding */
 .safe-bottom {
   padding-bottom: max(env(safe-area-inset-bottom), 8px);
@@ -17,6 +31,19 @@
 #mobile-body.keyboard-open {
   height: auto;
   max-height: calc(var(--svh) - 88px - 56px);
+}
+
+/* Z-index layering for mobile */
+.mobile-hud {
+  z-index: 30;
+}
+
+.mobile-nav {
+  z-index: 20;
+}
+
+.mobile-popover {
+  z-index: 40;
 }
 
 /* Reduced motion support */
