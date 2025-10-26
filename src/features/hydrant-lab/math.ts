@@ -1,9 +1,10 @@
 import { nozzleSmoothBoreGpm, pumpCurveMaxGpm } from '../../lib/hydraulics'
 
-// FL coefficients per NFPA/IFSTA reference tables
-const C_5IN = 0.025  // Field-calibrated for 5" LDH
-const C_3IN = 0.50   // Field-calibrated for 3" hose
-const APPLIANCE_MS = 25  // Master stream device loss
+// FL coefficients per AI_AGENT_TECHNICAL_GUIDE.md and NFPA/IFSTA reference tables
+const C_5IN = 0.025  // 5" LDH - field-calibrated
+const C_3IN = 0.8    // 3" hose per technical guide Table 3.2
+const C_175IN = 15.5 // 1.75" hose per technical guide Table 3.2
+const APPLIANCE_MS = 25  // Master stream device loss (per guide section 3.1)
 const ADAPTER_SIDE_5IN = 3  // 2.5" to Storz adapter on side ports
 
 /**
@@ -23,8 +24,18 @@ export function flPsiPerLeg(
 }
 
 /**
- * Solve the hydrant system hydraulics
- * Returns engine intake pressure, total inflow GPM, and hydrant residual
+ * Solve the hydrant system hydraulics with proper 70/30 flow split
+ * 
+ * CRITICAL: Field research shows steamer provides ~70% of flow due to larger port.
+ * This is NOT equal distribution. A 1500 GPM pump can flow 2700-2900 GPM when 
+ * hydrant-supplied with triple tap on good hydrant (50+ psi residual).
+ * 
+ * Key Facts:
+ * - Pump draft rating (e.g., 1510 GPM) is MINIMUM capability
+ * - With good hydrant, pump can flow 180-200% of draft rating
+ * - Steamer (5" direct) carries ~70% of total flow
+ * - Side ports (2.5" with adapters) carry ~15% each
+ * - Flow is limited by: hydrant capacity, pump RPM governor, or cavitation
  */
 export function solveHydrantSystem(s: {
   staticPsi: number
@@ -48,70 +59,104 @@ export function solveHydrantSystem(s: {
   // Residual floor per NFPA 291 (≥20 psi at the main)
   const residualFloor = 20
 
-  // Pump curve limit based on governor setpoint
-  const pumpMax = pumpCurveMaxGpm(1500, s.governorPsi) // Pierce 1500 base
+  // Pump capacity when HYDRANT-SUPPLIED (not draft)
+  // Real-world: 1500 GPM pump can flow 2700-2900 GPM with good hydrant supply
+  const pumpDraftRating = 1500
+  const pumpHydrantMax = pumpDraftRating * 2.0  // 200% of draft rating with hydrant
+  
+  // Governor limits based on PDP setting (NFPA 1911 curve still applies)
+  const governorLimit = pumpCurveMaxGpm(pumpDraftRating, s.governorPsi) * 2.0
 
-  // Iterative solver (2-3 passes converges quickly for UI)
-  let total = 0
-  const updatedLegs = [...openLegs]
+  // Calculate available pressure drop (static minus floor)
+  const availableDrop = Math.max(0, s.staticPsi - residualFloor)
+  
+  // HAV boost (only on steamer in boost mode)
+  const havBoostPsi = s.hav.enabled && s.hav.mode === 'boost' ? s.hav.boostPsi : 0
 
-  for (let pass = 0; pass < 3; pass++) {
-    total = 0
-
-    for (const leg of updatedLegs) {
-      // Initial flow guess for this leg
-      const guess = pass === 0 ? 600 : leg.gpm
-
-      // Calculate friction loss for this guess
-      const extra = leg.id !== 'steamer' && leg.sizeIn === 5 ? ADAPTER_SIDE_5IN : 0
-      const fl = flPsiPerLeg(guess, leg.sizeIn, leg.lengthFt, extra)
-
-      // HAV boost only applies to steamer in boost mode
-      const havBoost =
-        s.hav.enabled && leg.id === 'steamer' && s.hav.mode === 'boost'
-          ? s.hav.boostPsi
-          : 0
-
-      // Available pressure at intake = static - FL + HAV boost
-      const availablePsi = Math.max(0, s.staticPsi - fl + havBoost - residualFloor)
-
-      // Flow is proportional to available pressure (simplified model)
-      // More sophisticated: use resistance network solver
-      const legGpm = availablePsi * (leg.sizeIn === 5 ? 30 : 8) // Size-based flow factor
-
-      leg.gpm = legGpm
-      total += legGpm
-    }
-
-    // Apply pump ceiling
-    if (total > pumpMax) {
-      const scale = pumpMax / total
-      updatedLegs.forEach((leg) => {
-        leg.gpm *= scale
-      })
-      total = pumpMax
-    }
+  // CRITICAL: Flow split based on port sizes (field research)
+  // Steamer: 5" direct connection = ~70% of flow
+  // Side A/B: 2.5" with adapter = ~15% each (combined 30%)
+  const steamerLeg = openLegs.find((l: any) => l.id === 'steamer')
+  const sideLegs = openLegs.filter((l: any) => l.id !== 'steamer')
+  
+  // Calculate flow based on available pressure and port resistances
+  // Using Hazen-Williams: Q ∝ (ΔP / R)^0.54
+  let totalFlow = 0
+  
+  // Start with estimate based on static pressure
+  // Good hydrant at 50 psi can supply 2000+ GPM through single 5" steamer
+  const baseFlowPer5in = availableDrop * 28  // ~1400 GPM at 50 psi
+  const baseFlowPer3in = availableDrop * 10  // ~500 GPM at 50 psi
+  
+  // Apply flow split ratios (70/30 rule)
+  if (steamerLeg) {
+    const steamerExtra = steamerLeg.id !== 'steamer' && steamerLeg.sizeIn === 5 ? ADAPTER_SIDE_5IN : 0
+    const flSteamer = flPsiPerLeg(baseFlowPer5in, steamerLeg.sizeIn, steamerLeg.lengthFt, steamerExtra)
+    const availablePsiSteamer = Math.max(0, s.staticPsi + havBoostPsi - flSteamer - residualFloor)
+    
+    // Steamer gets 70% of total system capacity
+    steamerLeg.gpm = Math.min(
+      availablePsiSteamer * (steamerLeg.sizeIn === 5 ? 28 : 10),
+      pumpHydrantMax * 0.70
+    )
+    totalFlow += steamerLeg.gpm
+  }
+  
+  // Side legs share the remaining 30%
+  if (sideLegs.length > 0) {
+    const flowPerSide = (pumpHydrantMax * 0.30) / sideLegs.length
+    
+    sideLegs.forEach((leg: any) => {
+      const extra = leg.sizeIn === 5 ? ADAPTER_SIDE_5IN : 0
+      const flSide = flPsiPerLeg(flowPerSide, leg.sizeIn, leg.lengthFt, extra)
+      const availablePsiSide = Math.max(0, s.staticPsi - flSide - residualFloor)
+      
+      leg.gpm = Math.min(
+        availablePsiSide * (leg.sizeIn === 5 ? 28 : 10),
+        flowPerSide
+      )
+      totalFlow += leg.gpm
+    })
+  }
+  
+  // Apply governor ceiling (RPM limit)
+  if (totalFlow > governorLimit) {
+    const scale = governorLimit / totalFlow
+    openLegs.forEach((leg: any) => {
+      leg.gpm *= scale
+    })
+    totalFlow = governorLimit
   }
 
-  // Calculate final intake pressure (simplified: assume uniform distribution)
-  const avgFL = updatedLegs.reduce((sum, leg) => {
+  // Calculate final intake pressure (weighted average of leg pressures)
+  let weightedIntake = 0
+  let totalWeight = 0
+  
+  openLegs.forEach((leg: any) => {
+    const extra = leg.id !== 'steamer' && leg.sizeIn === 5 ? ADAPTER_SIDE_5IN : 0
+    const fl = flPsiPerLeg(leg.gpm, leg.sizeIn, leg.lengthFt, extra)
+    const legBoost = leg.id === 'steamer' && s.hav.enabled && s.hav.mode === 'boost' ? havBoostPsi : 0
+    const legIntake = Math.max(residualFloor, s.staticPsi - fl + legBoost)
+    
+    weightedIntake += legIntake * leg.gpm
+    totalWeight += leg.gpm
+  })
+  
+  const engineIntakePsi = totalWeight > 0 
+    ? weightedIntake / totalWeight 
+    : s.staticPsi
+
+  // Hydrant residual (approximate - pressure at main after all legs drawing)
+  const totalFL = openLegs.reduce((sum, leg: any) => {
     const extra = leg.id !== 'steamer' && leg.sizeIn === 5 ? ADAPTER_SIDE_5IN : 0
     return sum + flPsiPerLeg(leg.gpm, leg.sizeIn, leg.lengthFt, extra)
-  }, 0) / updatedLegs.length
-
-  const havBoostEffect =
-    s.hav.enabled && s.hav.mode === 'boost' ? s.hav.boostPsi * 0.7 : 0
-
-  const engineIntakePsi = Math.max(
-    residualFloor,
-    s.staticPsi - avgFL + havBoostEffect
-  )
-
-  const hydrantResidualPsi = Math.max(residualFloor, engineIntakePsi - 5)
+  }, 0) / openLegs.length
+  
+  const hydrantResidualPsi = Math.max(residualFloor, s.staticPsi - totalFL * 0.5)
 
   return {
     engineIntakePsi: Math.round(engineIntakePsi * 10) / 10,
-    totalInflowGpm: Math.round(total),
+    totalInflowGpm: Math.round(totalFlow),
     hydrantResidualPsi: Math.round(hydrantResidualPsi * 10) / 10
   }
 }

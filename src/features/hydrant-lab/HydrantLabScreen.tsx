@@ -6,6 +6,7 @@ import { ConfigTray } from './ConfigTray'
 import { StatsStrip } from './StatsStrip'
 import { AdvisorChips } from './AdvisorChips'
 import { HosePaths } from './HosePaths'
+import { DischargePanel } from './DischargePanel'
 
 function Pill({ 
   label, 
@@ -71,10 +72,10 @@ function IconButton({
 export function HydrantLabScreen() {
   const s = useHydrantLab()
   
-  // Recompute on mount and when key values change
+  // Initial computation on mount only
   useEffect(() => {
     s.recompute()
-  }, [s.legs, s.hav, s.governorPsi, s.staticPsi])
+  }, []) // Empty deps - only run once on mount
   
   return (
     <div className="h-screen bg-[#0f141a] text-slate-100 flex flex-col">
@@ -92,7 +93,13 @@ export function HydrantLabScreen() {
             value={`${s.engineIntakePsi} PSI`} 
             tone={toneByResidual(s.engineIntakePsi)} 
           />
-          <Pill label="TOTAL INFLOW" value={`${Math.round(s.totalInflowGpm)} GPM`} tone="neutral" />
+          <Pill label="SUPPLY" value={`${Math.round(s.totalInflowGpm)} GPM`} tone="good" />
+          <Pill 
+            label="DISCHARGE" 
+            value={`${Math.round(s.totalDischargeFlowGpm)} GPM`} 
+            tone={s.totalDischargeFlowGpm < s.totalDischargeDemandGpm ? "warn" : "good"} 
+          />
+          <Pill label="PDP" value={`${s.pumpDischargePressurePsi} PSI`} tone="neutral" />
         </div>
         <div className="flex gap-2">
           <OutlineButton>A/B Compare</OutlineButton>
@@ -101,7 +108,7 @@ export function HydrantLabScreen() {
       </div>
 
       {/* Main content area */}
-      <div className="flex-1 grid grid-cols-[1fr_380px] gap-4 p-4 overflow-hidden">
+      <div className="flex-1 grid grid-cols-[1fr_380px_380px] gap-4 p-4 overflow-hidden">
         {/* Left: Hydrant visualization */}
         <div className="rounded-2xl bg-[#171d24] p-6 relative overflow-hidden flex items-center justify-center">
           <div className="relative">
@@ -110,9 +117,10 @@ export function HydrantLabScreen() {
           </div>
         </div>
 
-        {/* Right: Controls and stats */}
+        {/* Middle: Supply Configuration */}
         <div className="flex flex-col gap-4 overflow-y-auto">
           <div className="rounded-2xl bg-[#171d24] p-4">
+            <h2 className="text-lg font-bold mb-4 opacity-70">SUPPLY SIDE</h2>
             <EngineIntakePuck 
               intakePsi={s.engineIntakePsi} 
               totalGpm={s.totalInflowGpm} 
@@ -129,6 +137,14 @@ export function HydrantLabScreen() {
           
           <div className="rounded-2xl bg-[#171d24] p-4">
             <AdvisorChips />
+          </div>
+        </div>
+        
+        {/* Right: Discharge Configuration */}
+        <div className="flex flex-col gap-4 overflow-y-auto">
+          <div className="rounded-2xl bg-[#171d24] p-4">
+            <h2 className="text-lg font-bold mb-4 opacity-70">DISCHARGE SIDE</h2>
+            <DischargePanel />
           </div>
         </div>
       </div>
