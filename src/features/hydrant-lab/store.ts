@@ -158,6 +158,14 @@ type LabState = {
   pumpCavitating: boolean
   governorLimited: boolean
   
+  // NEW: Discharge bench for testing evolutions
+  dischargeBench: {
+    enabled: boolean
+    evolutionId: string
+    gatePercent: number
+    lengthFtOverride?: number
+  }
+  
   setGovernor: (psi: number) => void
   setLeg: (id: PortId, mut: (l: Leg) => void) => void
   toggleGate: (id: 'sideA' | 'sideB') => void
@@ -175,6 +183,9 @@ type LabState = {
   removeDischargeLine: (id: string) => void
   updateDischargeLine: (id: string, mut: (line: DischargeLine) => void) => void
   toggleDischargeGate: (id: string) => void
+  
+  // NEW: Discharge bench methods
+  setDischargeBench: (partial: Partial<LabState['dischargeBench']>) => void
   
   recompute: () => void
 }
@@ -199,6 +210,13 @@ export const useHydrantLab = create<LabState>((set, get) => ({
   totalDischargeFlowGpm: 0,
   pumpCavitating: false,
   governorLimited: false,
+  
+  // NEW: Discharge bench initial state
+  dischargeBench: {
+    enabled: true,
+    evolutionId: '25-sb-1-18',  // default to 2½" SB 1⅛"
+    gatePercent: 100,
+  },
   
   setGovernor: (psi) => {
     set({ governorPsi: Math.max(50, Math.min(300, psi)) })
@@ -335,6 +353,14 @@ export const useHydrantLab = create<LabState>((set, get) => ({
       dischargeLines: s.dischargeLines.map(line =>
         line.id === id ? { ...line, gateOpen: !line.gateOpen } : line
       )
+    }))
+    get().recompute()
+  },
+  
+  // NEW: Discharge bench method
+  setDischargeBench: (partial) => {
+    set(s => ({
+      dischargeBench: { ...s.dischargeBench, ...partial }
     }))
     get().recompute()
   },

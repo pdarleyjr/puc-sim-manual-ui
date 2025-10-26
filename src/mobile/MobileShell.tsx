@@ -12,6 +12,7 @@ import PanelDischarges from './pages/panel/PanelDischarges'
 import PanelData from './pages/panel/PanelData'
 import HydrantPorts from './pages/hydrant/HydrantPorts'
 import HydrantHAV from './pages/hydrant/HydrantHAV'
+import HydrantDischarge from './pages/hydrant/HydrantDischarge'
 import HydrantAdvisor from './pages/hydrant/HydrantAdvisor'
 
 // Feature flag - can be disabled by setting VITE_MOBILE_APP_UI=false
@@ -99,6 +100,9 @@ export default function MobileShell({ mode }: MobileShellProps) {
         break
       case 'hav':
         pageContent = <HydrantHAV />
+        break
+      case 'discharge':
+        pageContent = <HydrantDischarge />
         break
       case 'advisor':
         pageContent = <HydrantAdvisor />

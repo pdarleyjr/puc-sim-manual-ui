@@ -138,6 +138,7 @@ export interface Discharge {
   foamCapable: boolean
   lengthFt: number
   assignment: AssignmentConfig  // NEW: assignment configuration
+  evolutionId?: string    // NEW: evolution ID for 2½" lines
   gpmNow: number
   gallonsThisEng: number
   displayPsi: number      // Damped display value for gauge (cosmetic only)
@@ -188,6 +189,7 @@ export interface AppState {
   setGovernorSetPsi: (psi: number) => void
   setGovernorSetRpm: (rpm: number) => void
   setLine: (id: DischargeId, patch: Partial<Discharge>) => void
+  setLineEvolution: (id: DischargeId, evolutionId: string) => void
   recomputeMasters: () => void
   tickRpm: () => void
   setSoundOn: (on: boolean) => void
@@ -629,11 +631,25 @@ export const useStore = create<AppState>((set, get) => ({
     if (patch.assignment !== undefined && patch.assignment.type !== oldState.assignment.type) {
       get().log('DISCHARGE_ASSIGNMENT', { line: id, assignment: patch.assignment.type })
     }
+    if (patch.evolutionId !== undefined && patch.evolutionId !== oldState.evolutionId) {
+      get().log('DISCHARGE_EVOLUTION', { line: id, evolutionId: patch.evolutionId })
+    }
     
     set({
       discharges: {
         ...get().discharges,
         [id]: { ...get().discharges[id], ...patch },
+      },
+    })
+    get().recomputeMasters()
+  },
+
+  setLineEvolution: (id, evolutionId) => {
+    get().log('DISCHARGE_EVOLUTION_CHANGE', { line: id, evolutionId })
+    set({
+      discharges: {
+        ...get().discharges,
+        [id]: { ...get().discharges[id], evolutionId },
       },
     })
     get().recomputeMasters()

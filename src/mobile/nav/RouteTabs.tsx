@@ -21,12 +21,14 @@ export default function RouteTabs({ page, activeTab, onTabChange }: RouteTabsPro
     : [
         { id: 'ports', icon: '🚰', label: 'Ports' },
         { id: 'hav', icon: '⚡', label: 'HAV' },
+        { id: 'discharge', icon: '🔥', label: 'Disch' },
         { id: 'advisor', icon: '💡', label: 'Advisor' }
       ]
   
   return (
     <nav 
-      className="h-[56px] px-2 grid grid-cols-3 items-center bg-[#0f141a] border-t border-[#232b35] safe-bottom"
+      className="h-[56px] px-2 grid items-center bg-[#0f141a] border-t border-[#232b35] safe-bottom"
+      style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       role="navigation"
       aria-label="Page navigation"
     >
