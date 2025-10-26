@@ -1,0 +1,200 @@
+build	Set up job	﻿2025-10-26T15:32:08.0981861Z Current runner version: '2.329.0'
+build	Set up job	2025-10-26T15:32:08.1015372Z ##[group]Runner Image Provisioner
+build	Set up job	2025-10-26T15:32:08.1016748Z Hosted Compute Agent
+build	Set up job	2025-10-26T15:32:08.1017625Z Version: 20250912.392
+build	Set up job	2025-10-26T15:32:08.1018672Z Commit: d921fda672a98b64f4f82364647e2f10b2267d0b
+build	Set up job	2025-10-26T15:32:08.1019827Z Build Date: 2025-09-12T15:23:14Z
+build	Set up job	2025-10-26T15:32:08.1020707Z ##[endgroup]
+build	Set up job	2025-10-26T15:32:08.1021655Z ##[group]Operating System
+build	Set up job	2025-10-26T15:32:08.1022516Z Ubuntu
+build	Set up job	2025-10-26T15:32:08.1023478Z 24.04.3
+build	Set up job	2025-10-26T15:32:08.1024291Z LTS
+build	Set up job	2025-10-26T15:32:08.1025131Z ##[endgroup]
+build	Set up job	2025-10-26T15:32:08.1025890Z ##[group]Runner Image
+build	Set up job	2025-10-26T15:32:08.1026898Z Image: ubuntu-24.04
+build	Set up job	2025-10-26T15:32:08.1027759Z Version: 20250929.60.1
+build	Set up job	2025-10-26T15:32:08.1029395Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20250929.60/images/ubuntu/Ubuntu2404-Readme.md
+build	Set up job	2025-10-26T15:32:08.1031929Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20250929.60
+build	Set up job	2025-10-26T15:32:08.1034103Z ##[endgroup]
+build	Set up job	2025-10-26T15:32:08.1036112Z ##[group]GITHUB_TOKEN Permissions
+build	Set up job	2025-10-26T15:32:08.1038555Z Contents: read
+build	Set up job	2025-10-26T15:32:08.1039380Z Metadata: read
+build	Set up job	2025-10-26T15:32:08.1040200Z Pages: write
+build	Set up job	2025-10-26T15:32:08.1040948Z ##[endgroup]
+build	Set up job	2025-10-26T15:32:08.1044550Z Secret source: Actions
+build	Set up job	2025-10-26T15:32:08.1046159Z Prepare workflow directory
+build	Set up job	2025-10-26T15:32:08.1601971Z Prepare all required actions
+build	Set up job	2025-10-26T15:32:08.1659161Z Getting action download info
+build	Set up job	2025-10-26T15:32:08.4387846Z Download action repository 'actions/checkout@v4' (SHA:08eba0b27e820071cde6df949e0beb9ba4906955)
+build	Set up job	2025-10-26T15:32:08.5086700Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+build	Set up job	2025-10-26T15:32:08.6682357Z Download action repository 'actions/configure-pages@v4' (SHA:1f0c5cde4bc74cd7e1254d0cb4de8d49e9068c7d)
+build	Set up job	2025-10-26T15:32:08.8969931Z Download action repository 'actions/upload-pages-artifact@v3' (SHA:56afc609e74202658d3ffba0e8f6dda462b719fa)
+build	Set up job	2025-10-26T15:32:09.1358897Z Getting action download info
+build	Set up job	2025-10-26T15:32:09.2344661Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+build	Set up job	2025-10-26T15:32:09.4112305Z Complete job name: build
+build	Checkout	﻿2025-10-26T15:32:09.4873265Z ##[group]Run actions/checkout@v4
+build	Checkout	2025-10-26T15:32:09.4874575Z with:
+build	Checkout	2025-10-26T15:32:09.4875365Z   repository: pdarleyjr/puc-sim-manual-ui
+build	Checkout	2025-10-26T15:32:09.4876636Z   token: ***
+build	Checkout	2025-10-26T15:32:09.4877359Z   ssh-strict: true
+build	Checkout	2025-10-26T15:32:09.4878105Z   ssh-user: git
+build	Checkout	2025-10-26T15:32:09.4878879Z   persist-credentials: true
+build	Checkout	2025-10-26T15:32:09.4879729Z   clean: true
+build	Checkout	2025-10-26T15:32:09.4880494Z   sparse-checkout-cone-mode: true
+build	Checkout	2025-10-26T15:32:09.4881422Z   fetch-depth: 1
+build	Checkout	2025-10-26T15:32:09.4882162Z   fetch-tags: false
+build	Checkout	2025-10-26T15:32:09.4882934Z   show-progress: true
+build	Checkout	2025-10-26T15:32:09.4883904Z   lfs: false
+build	Checkout	2025-10-26T15:32:09.4884613Z   submodules: false
+build	Checkout	2025-10-26T15:32:09.4885387Z   set-safe-directory: true
+build	Checkout	2025-10-26T15:32:09.4886452Z env:
+build	Checkout	2025-10-26T15:32:09.4887185Z   VITE_MOBILE_APP_UI: true
+build	Checkout	2025-10-26T15:32:09.4888015Z ##[endgroup]
+build	Checkout	2025-10-26T15:32:09.5991543Z Syncing repository: pdarleyjr/puc-sim-manual-ui
+build	Checkout	2025-10-26T15:32:09.5994639Z ##[group]Getting Git version info
+build	Checkout	2025-10-26T15:32:09.5996426Z Working directory is '/home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui'
+build	Checkout	2025-10-26T15:32:09.5998673Z [command]/usr/bin/git version
+build	Checkout	2025-10-26T15:32:09.6004489Z git version 2.51.0
+build	Checkout	2025-10-26T15:32:09.6031226Z ##[endgroup]
+build	Checkout	2025-10-26T15:32:09.6052909Z Temporarily overriding HOME='/home/runner/work/_temp/5e58c7ce-32ab-46c3-bd0d-f70fcf8f5673' before making global git config changes
+build	Checkout	2025-10-26T15:32:09.6057888Z Adding repository directory to the temporary git global config as a safe directory
+build	Checkout	2025-10-26T15:32:09.6061998Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui
+build	Checkout	2025-10-26T15:32:09.6093301Z Deleting the contents of '/home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui'
+build	Checkout	2025-10-26T15:32:09.6097404Z ##[group]Initializing the repository
+build	Checkout	2025-10-26T15:32:09.6101412Z [command]/usr/bin/git init /home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui
+build	Checkout	2025-10-26T15:32:09.6161622Z hint: Using 'master' as the name for the initial branch. This default branch name
+build	Checkout	2025-10-26T15:32:09.6166422Z hint: is subject to change. To configure the initial branch name to use in all
+build	Checkout	2025-10-26T15:32:09.6170363Z hint: of your new repositories, which will suppress this warning, call:
+build	Checkout	2025-10-26T15:32:09.6172205Z hint:
+build	Checkout	2025-10-26T15:32:09.6173307Z hint: 	git config --global init.defaultBranch <name>
+build	Checkout	2025-10-26T15:32:09.6175486Z hint:
+build	Checkout	2025-10-26T15:32:09.6176541Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+build	Checkout	2025-10-26T15:32:09.6178263Z hint: 'development'. The just-created branch can be renamed via this command:
+build	Checkout	2025-10-26T15:32:09.6179586Z hint:
+build	Checkout	2025-10-26T15:32:09.6180299Z hint: 	git branch -m <name>
+build	Checkout	2025-10-26T15:32:09.6181118Z hint:
+build	Checkout	2025-10-26T15:32:09.6182237Z hint: Disable this message with "git config set advice.defaultBranchName false"
+build	Checkout	2025-10-26T15:32:09.6184578Z Initialized empty Git repository in /home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/.git/
+build	Checkout	2025-10-26T15:32:09.6187799Z [command]/usr/bin/git remote add origin https://github.com/pdarleyjr/puc-sim-manual-ui
+build	Checkout	2025-10-26T15:32:09.6209475Z ##[endgroup]
+build	Checkout	2025-10-26T15:32:09.6210950Z ##[group]Disabling automatic garbage collection
+build	Checkout	2025-10-26T15:32:09.6212733Z [command]/usr/bin/git config --local gc.auto 0
+build	Checkout	2025-10-26T15:32:09.6241550Z ##[endgroup]
+build	Checkout	2025-10-26T15:32:09.6242935Z ##[group]Setting up auth
+build	Checkout	2025-10-26T15:32:09.6246672Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build	Checkout	2025-10-26T15:32:09.6276264Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build	Checkout	2025-10-26T15:32:09.6543434Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build	Checkout	2025-10-26T15:32:09.6572461Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build	Checkout	2025-10-26T15:32:09.6788620Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+build	Checkout	2025-10-26T15:32:09.6828618Z ##[endgroup]
+build	Checkout	2025-10-26T15:32:09.6829907Z ##[group]Fetching the repository
+build	Checkout	2025-10-26T15:32:09.6837610Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +b85a98b8132b2622cd42089fccbf09fffe42b5ce:refs/remotes/origin/main
+build	Checkout	2025-10-26T15:32:10.0825018Z From https://github.com/pdarleyjr/puc-sim-manual-ui
+build	Checkout	2025-10-26T15:32:10.0827853Z  * [new ref]         b85a98b8132b2622cd42089fccbf09fffe42b5ce -> origin/main
+build	Checkout	2025-10-26T15:32:10.0855877Z ##[endgroup]
+build	Checkout	2025-10-26T15:32:10.0857550Z ##[group]Determining the checkout info
+build	Checkout	2025-10-26T15:32:10.0859375Z ##[endgroup]
+build	Checkout	2025-10-26T15:32:10.0863848Z [command]/usr/bin/git sparse-checkout disable
+build	Checkout	2025-10-26T15:32:10.0905883Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+build	Checkout	2025-10-26T15:32:10.0942232Z ##[group]Checking out the ref
+build	Checkout	2025-10-26T15:32:10.0943888Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+build	Checkout	2025-10-26T15:32:10.1244143Z Switched to a new branch 'main'
+build	Checkout	2025-10-26T15:32:10.1246414Z branch 'main' set up to track 'origin/main'.
+build	Checkout	2025-10-26T15:32:10.1255495Z ##[endgroup]
+build	Checkout	2025-10-26T15:32:10.1292475Z [command]/usr/bin/git log -1 --format=%H
+build	Checkout	2025-10-26T15:32:10.1316118Z b85a98b8132b2622cd42089fccbf09fffe42b5ce
+build	Setup Node	﻿2025-10-26T15:32:10.1552534Z ##[group]Run actions/setup-node@v4
+build	Setup Node	2025-10-26T15:32:10.1553338Z with:
+build	Setup Node	2025-10-26T15:32:10.1553779Z   node-version: 20
+build	Setup Node	2025-10-26T15:32:10.1554219Z   cache: npm
+build	Setup Node	2025-10-26T15:32:10.1554652Z   always-auth: false
+build	Setup Node	2025-10-26T15:32:10.1555110Z   check-latest: false
+build	Setup Node	2025-10-26T15:32:10.1555737Z   token: ***
+build	Setup Node	2025-10-26T15:32:10.1556417Z env:
+build	Setup Node	2025-10-26T15:32:10.1556845Z   VITE_MOBILE_APP_UI: true
+build	Setup Node	2025-10-26T15:32:10.1557323Z ##[endgroup]
+build	Setup Node	2025-10-26T15:32:10.3288700Z Found in cache @ /opt/hostedtoolcache/node/20.19.5/x64
+build	Setup Node	2025-10-26T15:32:10.3294943Z ##[group]Environment details
+build	Setup Node	2025-10-26T15:32:11.7715930Z node: v20.19.5
+build	Setup Node	2025-10-26T15:32:11.7716379Z npm: 10.8.2
+build	Setup Node	2025-10-26T15:32:11.7716761Z yarn: 1.22.22
+build	Setup Node	2025-10-26T15:32:11.7718256Z ##[endgroup]
+build	Setup Node	2025-10-26T15:32:11.7738396Z [command]/opt/hostedtoolcache/node/20.19.5/x64/bin/npm config get cache
+build	Setup Node	2025-10-26T15:32:12.0103687Z /home/runner/.npm
+build	Setup Node	2025-10-26T15:32:12.1410209Z Cache hit for: node-cache-Linux-x64-npm-d1d593b3cdf8e12a1b207424238961dd3661d095fa5c112af1ebf06f58ffd1fd
+build	Setup Node	2025-10-26T15:32:12.5237289Z Received 43667515 of 43667515 (100.0%), 126.2 MBs/sec
+build	Setup Node	2025-10-26T15:32:12.5318088Z Cache Size: ~42 MB (43667515 B)
+build	Setup Node	2025-10-26T15:32:12.6458641Z [command]/usr/bin/tar -xf /home/runner/work/_temp/68e85372-b3d1-4f66-b33b-91b687964b3f/cache.tzst -P -C /home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui --use-compress-program unzstd
+build	Setup Node	2025-10-26T15:32:12.6459804Z Cache restored successfully
+build	Setup Node	2025-10-26T15:32:12.6545430Z Cache restored from key: node-cache-Linux-x64-npm-d1d593b3cdf8e12a1b207424238961dd3661d095fa5c112af1ebf06f58ffd1fd
+build	Install dependencies	﻿2025-10-26T15:32:12.6702723Z ##[group]Run npm ci
+build	Install dependencies	2025-10-26T15:32:12.6703300Z [36;1mnpm ci[0m
+build	Install dependencies	2025-10-26T15:32:12.6745571Z shell: /usr/bin/bash -e {0}
+build	Install dependencies	2025-10-26T15:32:12.6745873Z env:
+build	Install dependencies	2025-10-26T15:32:12.6746056Z   VITE_MOBILE_APP_UI: true
+build	Install dependencies	2025-10-26T15:32:12.6746276Z ##[endgroup]
+build	Install dependencies	2025-10-26T15:32:18.9154699Z 
+build	Install dependencies	2025-10-26T15:32:18.9163819Z added 335 packages, and audited 336 packages in 6s
+build	Install dependencies	2025-10-26T15:32:18.9164296Z 
+build	Install dependencies	2025-10-26T15:32:18.9164598Z 76 packages are looking for funding
+build	Install dependencies	2025-10-26T15:32:18.9165133Z   run `npm fund` for details
+build	Install dependencies	2025-10-26T15:32:18.9224689Z 
+build	Install dependencies	2025-10-26T15:32:18.9225072Z 1 moderate severity vulnerability
+build	Install dependencies	2025-10-26T15:32:18.9225453Z 
+build	Install dependencies	2025-10-26T15:32:18.9225690Z To address all issues, run:
+build	Install dependencies	2025-10-26T15:32:18.9226142Z   npm audit fix
+build	Install dependencies	2025-10-26T15:32:18.9226413Z 
+build	Install dependencies	2025-10-26T15:32:18.9226656Z Run `npm audit` for details.
+build	Build	﻿2025-10-26T15:32:18.9560578Z ##[group]Run npm run build
+build	Build	2025-10-26T15:32:18.9560858Z [36;1mnpm run build[0m
+build	Build	2025-10-26T15:32:18.9593701Z shell: /usr/bin/bash -e {0}
+build	Build	2025-10-26T15:32:18.9593943Z env:
+build	Build	2025-10-26T15:32:18.9594124Z   VITE_MOBILE_APP_UI: true
+build	Build	2025-10-26T15:32:18.9594389Z   NODE_ENV: production
+build	Build	2025-10-26T15:32:18.9594730Z ##[endgroup]
+build	Build	2025-10-26T15:32:19.0650890Z 
+build	Build	2025-10-26T15:32:19.0651315Z > puc-sim-manual-ui@0.0.0 build
+build	Build	2025-10-26T15:32:19.0651792Z > tsc -b && vite build
+build	Build	2025-10-26T15:32:19.0651953Z 
+build	Build	2025-10-26T15:32:23.4166781Z [36mvite v7.1.10 [32mbuilding for production...[36m[39m
+build	Build	2025-10-26T15:32:23.6972937Z transforming...
+build	Build	2025-10-26T15:32:24.1775029Z Error: Cannot apply unknown utility class `px-3`. Are you using CSS modules or similar and missing `@reference`? https://tailwindcss.com/docs/functions-and-directives#reference-directive
+build	Build	2025-10-26T15:32:24.1783891Z     at onInvalidCandidate (/home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/tailwindcss/dist/lib.js:18:1332)
+build	Build	2025-10-26T15:32:24.1787570Z     at ge (/home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/tailwindcss/dist/lib.js:13:30343)
+build	Build	2025-10-26T15:32:24.1788869Z     at /home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/tailwindcss/dist/lib.js:18:373
+build	Build	2025-10-26T15:32:24.1790112Z     at L (/home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/tailwindcss/dist/lib.js:3:1656)
+build	Build	2025-10-26T15:32:24.1791376Z     at Ie (/home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/tailwindcss/dist/lib.js:18:172)
+build	Build	2025-10-26T15:32:24.1792617Z     at xi (/home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/tailwindcss/dist/lib.js:37:294)
+build	Build	2025-10-26T15:32:24.1794121Z     at async Ai (/home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/tailwindcss/dist/lib.js:37:637)
+build	Build	2025-10-26T15:32:24.1795502Z     at async Ur (/home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/@tailwindcss/node/dist/index.js:10:3384)
+build	Build	2025-10-26T15:32:24.1797285Z     at async ue (/home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/@tailwindcss/postcss/dist/index.js:10:3981)
+build	Build	2025-10-26T15:32:24.1798841Z     at async Object.Once (/home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/@tailwindcss/postcss/dist/index.js:10:4252)
+build	Build	2025-10-26T15:32:24.1800406Z [32m✓[39m 29 modules transformed.
+build	Build	2025-10-26T15:32:24.1828533Z [31m✗[39m Build failed in 744ms
+build	Build	2025-10-26T15:32:24.1829316Z [31merror during build:
+build	Build	2025-10-26T15:32:24.1832038Z [31m[vite:css] [postcss] tailwindcss: /home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/src/mobile/styles/mobile.css:1:1: Cannot apply unknown utility class `px-3`. Are you using CSS modules or similar and missing `@reference`? https://tailwindcss.com/docs/functions-and-directives#reference-directive[31m
+build	Build	2025-10-26T15:32:24.1834483Z file: [36m/home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/src/mobile/styles/mobile.css:1:0[31m
+build	Build	2025-10-26T15:32:24.1835305Z     at Input.error (/home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/postcss/lib/input.js:135:16)
+build	Build	2025-10-26T15:32:24.1836084Z     at Root.error (/home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/postcss/lib/node.js:146:32)
+build	Build	2025-10-26T15:32:24.1836878Z     at Object.Once (/home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/@tailwindcss/postcss/dist/index.js:10:6913)
+build	Build	2025-10-26T15:32:24.1837763Z     at async LazyResult.runAsync (/home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/postcss/lib/lazy-result.js:293:11)
+build	Build	2025-10-26T15:32:24.1838713Z     at async runPostCSS (file:///home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/vite/dist/node/chunks/dep-B0GuR2De.js:32051:19)
+build	Build	2025-10-26T15:32:24.1839684Z     at async compilePostCSS (file:///home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/vite/dist/node/chunks/dep-B0GuR2De.js:32035:6)
+build	Build	2025-10-26T15:32:24.1840643Z     at async compileCSS (file:///home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/vite/dist/node/chunks/dep-B0GuR2De.js:31965:26)
+build	Build	2025-10-26T15:32:24.1841899Z     at async Object.handler (file:///home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/vite/dist/node/chunks/dep-B0GuR2De.js:31498:54)
+build	Build	2025-10-26T15:32:24.1842853Z     at async transform (file:///home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/rollup/dist/es/shared/node-entry.js:21139:16)
+build	Build	2025-10-26T15:32:24.1845065Z     at async ModuleLoader.addModuleSource (file:///home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui/node_modules/rollup/dist/es/shared/node-entry.js:21352:36)[39m
+build	Build	2025-10-26T15:32:24.2040115Z ##[error]Process completed with exit code 1.
+build	Post Checkout	﻿2025-10-26T15:32:24.2140267Z Post job cleanup.
+build	Post Checkout	2025-10-26T15:32:24.3063454Z [command]/usr/bin/git version
+build	Post Checkout	2025-10-26T15:32:24.3097801Z git version 2.51.0
+build	Post Checkout	2025-10-26T15:32:24.3138667Z Temporarily overriding HOME='/home/runner/work/_temp/7a767b03-49df-44df-93f0-7b6b56496643' before making global git config changes
+build	Post Checkout	2025-10-26T15:32:24.3139640Z Adding repository directory to the temporary git global config as a safe directory
+build	Post Checkout	2025-10-26T15:32:24.3144191Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/puc-sim-manual-ui/puc-sim-manual-ui
+build	Post Checkout	2025-10-26T15:32:24.3177927Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build	Post Checkout	2025-10-26T15:32:24.3209066Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build	Post Checkout	2025-10-26T15:32:24.3429260Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build	Post Checkout	2025-10-26T15:32:24.3449072Z http.https://github.com/.extraheader
+build	Post Checkout	2025-10-26T15:32:24.3461196Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+build	Post Checkout	2025-10-26T15:32:24.3490427Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build	Complete job	﻿2025-10-26T15:32:24.3799086Z Cleaning up orphan processes
