@@ -1,3 +1,5 @@
+import { useHydrantLab } from './store'
+
 export function EngineIntakePuck({ 
   intakePsi, 
   totalGpm 
@@ -5,6 +7,10 @@ export function EngineIntakePuck({
   intakePsi: number
   totalGpm: number 
 }) {
+  // Get discharge data from store
+  const totalDischargeFlowGpm = useHydrantLab(s => s.totalDischargeFlowGpm)
+  const governorLimited = useHydrantLab(s => s.governorLimited)
+  
   // Visual gauge ring (simplified)
   const maxPsi = 100
   const pct = Math.min(100, (intakePsi / maxPsi) * 100)
@@ -46,10 +52,27 @@ export function EngineIntakePuck({
         </div>
       </div>
       
-      {/* Flow readout */}
-      <div className="text-center">
-        <div className="text-2xl font-bold tabular-nums">{Math.round(totalGpm)}</div>
-        <div className="text-xs opacity-60 uppercase">GPM Total Inflow</div>
+      {/* Flow readouts */}
+      <div className="text-center space-y-1">
+        <div>
+          <div className="text-2xl font-bold tabular-nums">{Math.round(totalGpm)}</div>
+          <div className="text-xs opacity-60 uppercase">Total Hydrant Inflow to Pump</div>
+        </div>
+        
+        {/* Discharge outflow display */}
+        {totalDischargeFlowGpm > 0 && (
+          <div className="pt-2 border-t border-white/10">
+            <div className="text-lg font-semibold tabular-nums flex items-center justify-center gap-1">
+              {Math.round(totalDischargeFlowGpm)}
+              {governorLimited && (
+                <span className="text-amber-400 text-xs" title="Governor limiting outflow">⚠</span>
+              )}
+            </div>
+            <div className="text-xs opacity-60 uppercase">
+              Outflow {governorLimited ? '(Governor-limited)' : ''}
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Status indicator */}

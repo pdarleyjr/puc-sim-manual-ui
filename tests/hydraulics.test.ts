@@ -12,6 +12,7 @@ import {
   type SupplyLeg,
   type HydrantTestData
 } from '../src/lib/hydraulics'
+import { solveHydrantSystem } from '../src/features/hydrant-lab/math'
 
 // ============================================================================
 // FRICTION LOSS TESTS - Industry Standard Coefficients
@@ -435,5 +436,183 @@ describe('USFA Textbook Example Validation', () => {
     // Chapter 2, Problem 5
     const feet = pressureToElevationFeet(65)
     expect(feet).toBeCloseTo(150, 0)
+  })
+})
+
+// ============================================================================
+// HYDRANT LAB SANITY CHECKS - Corrected Physics Model
+// ============================================================================
+
+describe('Hydrant Lab Sanity Checks (Task Validation)', () => {
+  it('Sanity Check 1: Single 5" LDH, 300ft, 50-psi hydrant → ~1290 gpm', () => {
+    // Single 5″ LDH, 300′, 50-psi hydrant, intake ~10 psi
+    // ΔP available across hose ≈ 40 psi
+    // FL = 0.08 × Q² × 3 ⇒ 0.24 Q² ≈ 40 ⇒ Q ≈ 12.9 ⇒ ~1290 gpm
+    
+    const result = solveHydrantSystem({
+      staticPsi: 50,
+      legs: {
+        steamer: { id: 'steamer', sizeIn: 5, lengthFt: 300, gpm: 0 },
+        sideA: null,
+        sideB: null
+      },
+      hav: { enabled: false, mode: 'bypass', outlets: 1, boostPsi: 0 },
+      governorPsi: 150
+    })
+    
+    // Should get ~1200-1400 gpm (matches field experience)
+    expect(result.totalInflowGpm).toBeGreaterThan(1100)
+    expect(result.totalInflowGpm).toBeLessThan(1500)
+    
+    // Intake should be relatively low (high friction)
+    expect(result.engineIntakePsi).toBeGreaterThan(5)
+    expect(result.engineIntakePsi).toBeLessThan(20)
+    
+    // Hydrant main residual should stay ≥20 psi
+    expect(result.hydrantResidualPsi).toBeGreaterThanOrEqual(20)
+  })
+  
+  it('Sanity Check 2: Add second 5" side leg → total ~1900-2100 gpm', () => {
+    // Two 5″ legs in parallel, each 300′
+    // Each leg carries ~900-1,000 gpm; total inflow ~1,900-2,100 gpm
+    // Intake climbs because each leg's FL drops
+    
+    const result = solveHydrantSystem({
+      staticPsi: 50,
+      legs: {
+        steamer: { id: 'steamer', sizeIn: 5, lengthFt: 300, gpm: 0 },
+        sideA: { id: 'sideA', sizeIn: 5, lengthFt: 300, gpm: 0, gateOpen: true },
+        sideB: null
+      },
+      hav: { enabled: false, mode: 'bypass', outlets: 1, boostPsi: 0 },
+      governorPsi: 150
+    })
+    
+    // Total flow should be significantly higher than single leg
+    expect(result.totalInflowGpm).toBeGreaterThan(1700)
+    expect(result.totalInflowGpm).toBeLessThan(2300)
+    
+    // Intake should be higher due to reduced friction per leg
+    expect(result.engineIntakePsi).toBeGreaterThan(15)
+    
+    // Hydrant main should still be ≥20 psi
+    expect(result.hydrantResidualPsi).toBeGreaterThanOrEqual(20)
+  })
+  
+  it('Sanity Check 3: 3" side leg contributes little, steamer >70%', () => {
+    // Swap side leg to 3″, 300′
+    // Its FL per 100′ at 1,000 gpm is ~80 psi; contributes very little flow
+    // Steamer still carries the lion's share (often >70%)
+    
+    const steamerLeg = { id: 'steamer' as const, sizeIn: 5 as const, lengthFt: 300, gpm: 0 }
+    const sideALeg = { id: 'sideA' as const, sizeIn: 3 as const, lengthFt: 300, gpm: 0, gateOpen: true }
+    
+    const result = solveHydrantSystem({
+      staticPsi: 50,
+      legs: {
+        steamer: steamerLeg,
+        sideA: sideALeg,
+        sideB: null
+      },
+      hav: { enabled: false, mode: 'bypass', outlets: 1, boostPsi: 0 },
+      governorPsi: 150
+    })
+    
+    // Total flow should be only slightly higher than single 5" leg
+    expect(result.totalInflowGpm).toBeGreaterThan(1100)
+    expect(result.totalInflowGpm).toBeLessThan(1700)
+    
+    // Check steamer carries majority (leg objects are mutated by solver)
+    const steamerGpm = steamerLeg.gpm
+    const sideGpm = sideALeg.gpm
+    const steamerPercent = steamerGpm / result.totalInflowGpm
+    
+    // Steamer should carry >70% due to 3" having high resistance
+    expect(steamerPercent).toBeGreaterThan(0.70)
+    
+    // 3" side leg should contribute relatively little
+    expect(sideGpm).toBeLessThan(steamerGpm * 0.5)
+  })
+  
+  it('Sanity Check 4: Governor limits outflow at high PDP', () => {
+    // At PDP 150 psi, pump can move roughly rated flow (1500 gpm)
+    // At higher PDP (200-250 psi), governor limits to 70-50% of rated
+    // This should prevent flow even with good hydrant supply
+    
+    const goodSupply = solveHydrantSystem({
+      staticPsi: 80,
+      legs: {
+        steamer: { id: 'steamer', sizeIn: 5, lengthFt: 100, gpm: 0 },
+        sideA: { id: 'sideA', sizeIn: 5, lengthFt: 100, gpm: 0, gateOpen: true },
+        sideB: null
+      },
+      hav: { enabled: false, mode: 'bypass', outlets: 1, boostPsi: 0 },
+      governorPsi: 150
+    })
+    
+    // At 150 psi PDP, should allow ~1500 gpm (100% of rating)
+    expect(goodSupply.totalInflowGpm).toBeGreaterThan(1300)
+    
+    // Now limit by governor at high PDP
+    const governorLimited = solveHydrantSystem({
+      staticPsi: 80,
+      legs: {
+        steamer: { id: 'steamer', sizeIn: 5, lengthFt: 100, gpm: 0 },
+        sideA: { id: 'sideA', sizeIn: 5, lengthFt: 100, gpm: 0, gateOpen: true },
+        sideB: null
+      },
+      hav: { enabled: false, mode: 'bypass', outlets: 1, boostPsi: 0 },
+      governorPsi: 250  // High PDP → 50% governor limit
+    })
+    
+    // At 250 psi PDP, governor should limit to ~750 gpm (50% of 1500)
+    expect(governorLimited.totalInflowGpm).toBeLessThan(900)
+    expect(governorLimited.totalInflowGpm).toBeGreaterThan(600)
+  })
+  
+  it('Validates NFPA 291 constraint: hydrant main ≥20 psi', () => {
+    // Even with massive demand, hydrant main residual should never drop below 20 psi
+    // This is the NFPA 291 fire flow rating constraint
+    
+    const result = solveHydrantSystem({
+      staticPsi: 40,  // Low static pressure
+      legs: {
+        steamer: { id: 'steamer', sizeIn: 5, lengthFt: 300, gpm: 0 },
+        sideA: { id: 'sideA', sizeIn: 5, lengthFt: 300, gpm: 0, gateOpen: true },
+        sideB: { id: 'sideB', sizeIn: 5, lengthFt: 300, gpm: 0, gateOpen: true }
+      },
+      hav: { enabled: false, mode: 'bypass', outlets: 1, boostPsi: 0 },
+      governorPsi: 150
+    })
+    
+    // Hydrant residual must stay ≥20 psi per NFPA 291
+    expect(result.hydrantResidualPsi).toBeGreaterThanOrEqual(20)
+    
+    // Intake CAN be lower (the fix allows this)
+    // This is acceptable per field practice
+    expect(result.engineIntakePsi).toBeLessThan(result.hydrantResidualPsi)
+  })
+  
+  it('Allows engine intake below 20 psi during high flow', () => {
+    // Critical fix: intake can legitimately be <20 psi
+    // Only the MAIN residual must stay ≥20 psi
+    
+    const result = solveHydrantSystem({
+      staticPsi: 50,
+      legs: {
+        steamer: { id: 'steamer', sizeIn: 5, lengthFt: 400, gpm: 0 },  // Long run
+        sideA: null,
+        sideB: null
+      },
+      hav: { enabled: false, mode: 'bypass', outlets: 1, boostPsi: 0 },
+      governorPsi: 150
+    })
+    
+    // With long hose run, intake can be <20 psi
+    // This is physically correct and matches field observations
+    expect(result.engineIntakePsi).toBeLessThan(20)
+    
+    // But hydrant main stays protected
+    expect(result.hydrantResidualPsi).toBeGreaterThanOrEqual(20)
   })
 })

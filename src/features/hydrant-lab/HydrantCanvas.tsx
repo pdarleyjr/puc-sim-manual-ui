@@ -11,6 +11,29 @@ export function HydrantCanvas() {
     }
   }
   
+  const handleGateClick = (portId: 'sideA' | 'sideB', e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent port click
+    const leg = s.legs[portId]
+    if (leg) {
+      s.toggleGate(portId)
+    }
+  }
+  
+  const handleHAVClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent port click
+    if (!s.hav.enabled) {
+      s.setHavEnabled(true)
+      s.setHavMode('bypass')
+    } else {
+      // Cycle: off -> bypass -> boost -> off
+      if (s.hav.mode === 'bypass') {
+        s.setHavMode('boost')
+      } else {
+        s.setHavEnabled(false)
+      }
+    }
+  }
+  
   const getSteamerColor = () => {
     const leg = s.legs.steamer
     if (!leg) return '#374151' // gray-700
@@ -42,6 +65,33 @@ export function HydrantCanvas() {
           </text>
         </g>
         
+        {/* HAV toggle near steamer */}
+        {s.legs.steamer && (
+          <g
+            onClick={handleHAVClick}
+            className="cursor-pointer hover:opacity-80 transition-opacity"
+          >
+            <rect 
+              x="245" 
+              y="405" 
+              width="45" 
+              height="30" 
+              fill={s.hav.enabled ? (s.hav.mode === 'boost' ? '#10b981' : '#f59e0b') : '#6b7280'} 
+              stroke="#fff" 
+              strokeWidth="2" 
+              rx="4"
+            />
+            <text x="267.5" y="423" textAnchor="middle" fill="#fff" fontSize="9" fontWeight="bold">
+              HAV
+            </text>
+            {s.hav.enabled && (
+              <text x="267.5" y="432" textAnchor="middle" fill="#fff" fontSize="7">
+                {s.hav.mode === 'boost' ? 'BOOST' : 'BYPASS'}
+              </text>
+            )}
+          </g>
+        )}
+        
         {/* Side A port (left) */}
         <g
           onClick={() => handlePortClick('sideA')}
@@ -53,6 +103,28 @@ export function HydrantCanvas() {
           </text>
         </g>
         
+        {/* Gate for Side A */}
+        {s.legs.sideA && (
+          <g
+            onClick={(e) => handleGateClick('sideA', e)}
+            className="cursor-pointer hover:opacity-80 transition-opacity"
+          >
+            <rect 
+              x="40" 
+              y="260" 
+              width="40" 
+              height="20" 
+              fill={s.legs.sideA.gateOpen ? '#10b981' : '#ef4444'} 
+              stroke="#fff" 
+              strokeWidth="2" 
+              rx="3"
+            />
+            <text x="60" y="273" textAnchor="middle" fill="#fff" fontSize="8" fontWeight="bold">
+              {s.legs.sideA.gateOpen ? 'OPEN' : 'CLOSED'}
+            </text>
+          </g>
+        )}
+        
         {/* Side B port (right) */}
         <g
           onClick={() => handlePortClick('sideB')}
@@ -63,6 +135,28 @@ export function HydrantCanvas() {
             {s.legs.sideB ? `${s.legs.sideB.sizeIn}"` : 'B'}
           </text>
         </g>
+        
+        {/* Gate for Side B */}
+        {s.legs.sideB && (
+          <g
+            onClick={(e) => handleGateClick('sideB', e)}
+            className="cursor-pointer hover:opacity-80 transition-opacity"
+          >
+            <rect 
+              x="320" 
+              y="260" 
+              width="40" 
+              height="20" 
+              fill={s.legs.sideB.gateOpen ? '#10b981' : '#ef4444'} 
+              stroke="#fff" 
+              strokeWidth="2" 
+              rx="3"
+            />
+            <text x="340" y="273" textAnchor="middle" fill="#fff" fontSize="8" fontWeight="bold">
+              {s.legs.sideB.gateOpen ? 'OPEN' : 'CLOSED'}
+            </text>
+          </g>
+        )}
         
         {/* Operating nut on top */}
         <rect x="180" y="180" width="40" height="25" fill="#9ca3af" stroke="#6b7280" strokeWidth="2" rx="5" />
@@ -76,7 +170,7 @@ export function HydrantCanvas() {
       {/* Labels */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 text-center">
         <div className="text-lg font-bold text-slate-300">Hydrant</div>
-        <div className="text-xs text-slate-500">Click ports to connect/configure</div>
+        <div className="text-xs text-slate-500">Click ports to connect • Click gates/HAV to toggle</div>
       </div>
     </div>
   )

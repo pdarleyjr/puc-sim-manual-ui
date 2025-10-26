@@ -377,20 +377,20 @@ export const useHydrantLab = create<LabState>((set, get) => ({
 /**
  * Calculate friction loss in discharge hose
  * Using standard fire service friction loss formula: FL = C × (Q/100)² × (L/100)
- * Coefficients from AI_AGENT_TECHNICAL_GUIDE.md Table 3.2
+ * Coefficients from IFSTA/NFPA standards (Utah Valley University reference)
  */
 function dischargeFrictionLoss(
   gpm: number, 
   diameterIn: number, 
   lengthFt: number
 ): number {
-  // Coefficients per AI_AGENT_TECHNICAL_GUIDE.md
+  // Standard fire service coefficients per IFSTA/NFPA
   const coefficients: Record<number, number> = {
-    1.75: 15.5,  // Per technical guide Table 3.2
-    2.5: 2.0,    // Standard coefficient for 2.5" hose
-    3: 0.8,      // Per technical guide Table 3.2
-    4: 0.12,     // Standard LDH coefficient
-    5: 0.025     // Standard 5" LDH coefficient
+    1.75: 15.5,  // 1.75" handline per IFSTA
+    2.5: 2.0,    // 2.5" hose standard coefficient
+    3: 0.8,      // 3" hose per technical guide
+    4: 0.2,      // 4" LDH standard coefficient
+    5: 0.08      // 5" LDH per IFSTA/NFPA standards
   }
   
   const C = coefficients[diameterIn] || 2.0
