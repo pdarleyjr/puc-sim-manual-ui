@@ -208,8 +208,8 @@ export function Panel() {
 
             {/* Center - Master Gauges & Discharges */}
             <section className="order-4 lg:order-none lg:col-span-8 space-y-4 sm:space-y-6">
-              {/* Master Gauges */}
-              <div id="master-gauges" className="puc-card">
+              {/* Master Gauges - Hidden on mobile (now in TopHUD) */}
+              <div id="master-gauges" className="hidden md:block puc-card">
                 <span id="anchor-master" className="absolute -right-2 top-4 h-0 w-0" aria-hidden="true" />
                 <h3 className="text-sm font-semibold mb-4 text-center opacity-80">MASTER GAUGES</h3>
                 <div className="flex flex-wrap justify-around items-center gap-4">
@@ -280,7 +280,8 @@ export function Panel() {
 
             {/* Right Column - Governor, Levels, Pump Data */}
             <section className={`lg:col-span-2 space-y-3 sm:space-y-4 ${compactMode ? 'hidden lg:block' : ''}`}>
-              <div className="relative order-2 lg:order-none">
+              {/* Governor Card - Hidden on mobile (now in TopHUD) */}
+              <div className="relative order-2 lg:order-none hidden md:block">
                 <span id="anchor-governor" className="absolute -left-2 top-4 h-0 w-0" aria-hidden="true" />
                 <div id="governor-card">
                   <GovernorCard />

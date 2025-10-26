@@ -1,0 +1,54 @@
+/* Mobile-specific styles */
+:root {
+  --svh: 100svh; /* Small viewport height, updated by JS */
+}
+
+/* Safe area bottom padding */
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 8px);
+}
+
+/* Mobile body height calculation */
+#mobile-body {
+  height: calc(var(--svh) - 88px - 56px - env(safe-area-inset-bottom));
+}
+
+/* Keyboard open adjustments */
+#mobile-body.keyboard-open {
+  height: auto;
+  max-height: calc(var(--svh) - 88px - 56px);
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Button styles for mobile */
+.btn-on {
+  @apply px-3 py-1.5 rounded-lg bg-teal-500/20 text-teal-400 border border-teal-500/40 text-sm font-medium;
+}
+
+.btn-off {
+  @apply px-3 py-1.5 rounded-lg bg-[#1a2332] text-slate-400 border border-[#2a3340] text-sm font-medium;
+}
+
+/* HUD pill component */
+.hud-pill {
+  @apply flex flex-col items-center justify-center px-2 py-1.5 rounded-lg bg-[#0b1220]/80 border border-[#2a3340];
+}
+
+/* Touch target minimum size */
+button, a, [role="button"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Compact button override for tight layouts */
+.btn-compact {
+  min-height: 32px;
+  min-width: 32px;
+}
