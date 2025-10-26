@@ -83,3 +83,35 @@ button:focus-visible {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* iOS-safe viewport units for mobile */
+:root {
+  --svh: 100svh;
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --svh: 100dvh;
+  }
+}
+
+html, body, #root {
+  height: 100%;
+  background: #0f141a;
+}
+
+/* Mobile fullscreen container */
+.mobile-fullscreen {
+  position: fixed;
+  inset: 0;
+  height: var(--svh);
+  overflow: hidden;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

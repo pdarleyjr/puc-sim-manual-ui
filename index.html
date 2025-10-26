@@ -3,15 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pump Operator Sim</title>
-    <!-- Error instrumentation for mobile debugging -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>PUC Pump Simulator</title>
+    
+    <!-- Error instrumentation for debugging mobile issues -->
     <script>
       window.addEventListener('error', function(e) {
-        console.error('[window.onerror]', e.error || e.message, e.filename, e.lineno);
+        console.log('[window.onerror]', e.error || e.message, e);
       });
       window.addEventListener('unhandledrejection', function(e) {
-        console.error('[unhandledrejection]', e.reason);
+        console.log('[unhandledrejection]', e.reason, e);
       });
     </script>
   </head>

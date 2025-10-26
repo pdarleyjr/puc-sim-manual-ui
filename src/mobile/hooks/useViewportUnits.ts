@@ -6,24 +6,29 @@ import { useEffect } from 'react'
  */
 export function useViewportUnits() {
   useEffect(() => {
-    const updateVH = () => {
-      // Use visualViewport if available (better for mobile)
-      const hv = (window as any).visualViewport?.height ?? window.innerHeight
+    const setViewportHeight = () => {
+      // Use visualViewport API if available (modern iOS), fallback to window.innerHeight
+      const hv = (window as any).visualViewport?.height || window.innerHeight
       document.documentElement.style.setProperty('--svh', `${hv}px`)
     }
-
-    // Initial set
-    updateVH()
-
-    // Update on resize, visualViewport changes, and orientation change
-    window.addEventListener('resize', updateVH)
-    window.addEventListener('orientationchange', updateVH)
-    ;(window as any).visualViewport?.addEventListener('resize', updateVH)
+    
+    // Set initial value
+    setViewportHeight()
+    
+    // Listen to various viewport changes
+    const vp = (window as any).visualViewport
+    if (vp) {
+      vp.addEventListener('resize', setViewportHeight)
+    }
+    window.addEventListener('resize', setViewportHeight)
+    window.addEventListener('orientationchange', setViewportHeight)
     
     return () => {
-      window.removeEventListener('resize', updateVH)
-      window.removeEventListener('orientationchange', updateVH)
-      ;(window as any).visualViewport?.removeEventListener('resize', updateVH)
+      if (vp) {
+        vp.removeEventListener('resize', setViewportHeight)
+      }
+      window.removeEventListener('resize', setViewportHeight)
+      window.removeEventListener('orientationchange', setViewportHeight)
     }
   }, [])
 }
