@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Panel } from '../ui/Panel'
 import { ModeLauncher } from '../ui/launcher/ModeLauncher'
 import { HydrantLabScreen } from '../features/hydrant-lab/HydrantLabScreen'
+import { HydrantLabScreenV2 } from '../features/hydrant-lab/HydrantLabScreenV2'
 import { useStore } from '../state/store'
 import type { LauncherMode } from '../state/launcher'
 import type { ScenarioId } from '../state/store'
@@ -68,17 +69,15 @@ function App() {
   }
   
   // Feature flag routing for Hydrant Lab V2
-  // TODO: HydrantLabScreenV2 component will be implemented in the next PR
-  // For now, we use the existing HydrantLabScreen as fallback
   const useHydrantLabV2 = featureFlag('HYDRANT_LAB_V2')
   
   if (useHydrantLabV2) {
-    console.log('🚩 HYDRANT_LAB_V2 flag enabled - HydrantLabScreenV2 component pending implementation')
+    console.log('🚩 HYDRANT_LAB_V2 flag enabled - using HydrantLabScreenV2')
   }
   
   // Render mobile shell OR desktop layout based on viewport
   const content = activeMode === 'hydrant_lab' 
-    ? (useHydrantLabV2 ? <HydrantLabScreen /> : <HydrantLabScreen />)  // V2 component pending
+    ? (useHydrantLabV2 ? <HydrantLabScreenV2 /> : <HydrantLabScreen />)
     : <Panel />
   
   return (
