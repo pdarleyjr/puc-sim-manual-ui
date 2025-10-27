@@ -4,6 +4,10 @@ import './styles/tailwind.css'
 import App from './app/App'
 import { useStore } from './state/store'
 import { ErrorBoundary } from './app/ErrorBoundary'
+import { initMobileToggles } from './mobile/registerMobileToggles'
+
+// Initialize mobile toggle tiles
+initMobileToggles()
 
 // DEV-ONLY: Guard against setState loops
 if (import.meta.env.DEV) {

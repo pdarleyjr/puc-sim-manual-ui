@@ -3,6 +3,50 @@ import { useLauncher } from '../state/launcher'
 import { getTiles } from './registerMobileToggles'
 import { useKeyboardOpen } from './hooks/useKeyboardOpen'
 
+/**
+ * QuickTogglesSheet - Slide-up bottom sheet with context-sensitive controls
+ * 
+ * Purpose:
+ * Provides quick access to frequently-used controls based on current mode,
+ * reducing navigation burden and improving workflow efficiency
+ * 
+ * Features:
+ * - Slide-up animation: 56px collapsed, 60vh expanded
+ * - Context-sensitive: Different tiles for panel vs hydrant modes
+ * - Keyboard avoidance: Lowers when keyboard opens
+ * - Drag handle for intuitive interaction
+ * - Smooth 250ms transitions
+ * 
+ * Context-Sensitive Content:
+ * - Panel mode: Discharge controls, foam system, intake settings
+ * - Hydrant mode: Port connections, gate controls, HAV settings
+ * - Scenarios mode: Mission objectives, timer, scoring
+ * 
+ * Keyboard Behavior:
+ * - When keyboard opens: Sheet lowers to -20vh (stays accessible)
+ * - When keyboard closes: Sheet returns to normal position
+ * - Prevents input fields from being hidden behind sheet
+ * 
+ * Responsive Heights:
+ * - Collapsed: 56px (drag handle visible)
+ * - Expanded: 60vh (majority of viewport)
+ * - Content area: calc(60vh - 40px) for scrolling
+ * 
+ * Z-Index Layering:
+ * - z-40: Above main content, below modals
+ * - Fixed positioning for persistent access
+ * - Rounded top corners for visual separation
+ * 
+ * Accessibility:
+ * - ARIA labels for expand/collapse states
+ * - aria-expanded for screen readers
+ * - Focus management for keyboard navigation
+ * - Scrollable content area with max height
+ * 
+ * Tile Registration:
+ * Tiles are registered via registerMobileToggles() in each mode's setup
+ * See: src/mobile/tiles/HydrantTiles.tsx and PanelTiles.tsx
+ */
 export default function QuickTogglesSheet() {
   const [isOpen, setIsOpen] = useState(false)
   const activeMode = useLauncher(state => state.chosenMode)
