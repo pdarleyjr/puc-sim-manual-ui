@@ -8,6 +8,48 @@ import {
 } from '../state/selectors'
 import { useCollapseHeader } from './hooks/useCollapseHeader'
 
+/**
+ * SAHud - Situational Awareness Heads-Up Display
+ * 
+ * Purpose:
+ * Provides at-a-glance status of critical pump parameters with
+ * color-coded warnings following HMI best practices (calm until critical)
+ * 
+ * Features:
+ * - Collapsible header: 72px normal, 48px compact when scrolling down
+ * - Tank/foam levels with percentage display
+ * - Intake/discharge pressures with PSI units
+ * - Governor controls with +/- 5 PSI/RPM bump buttons
+ * - Color-coded warnings for out-of-range values
+ * 
+ * Color Coding (HMI Best Practice):
+ * - Normal: slate-100 (white/neutral - calm state)
+ * - Warning: amber-400 (yellow - attention needed)
+ * - Critical: red-400 (red - immediate action required)
+ * 
+ * Warning Thresholds:
+ * - Tank: <10% red, <25% amber
+ * - Foam: <10% red
+ * - Intake: <10 PSI red, <20 PSI amber (cavitation risk)
+ * - Discharge: >300 PSI red, >250 PSI amber (overpressure risk)
+ * 
+ * Collapsible Behavior:
+ * - Triggered by scroll position in 'mobile-main' container
+ * - Smooth 200ms transition between states
+ * - Preserves all functionality in compact mode
+ * 
+ * Governor Controls:
+ * - Mode: PDP (Pressure) or RPM (Engine Speed)
+ * - Bump increment: 5 units per tap
+ * - Touch-optimized 20x20px buttons
+ * - Active feedback with color change
+ * 
+ * Accessibility:
+ * - ARIA labels for all buttons
+ * - Semantic header element
+ * - Tabular numbers for consistent digit width
+ * - High contrast text (WCAG AA compliant)
+ */
 export default function SAHud() {
   const tankPct = useStore(selectTankPct)
   const foamPct = useStore(selectFoamPct)

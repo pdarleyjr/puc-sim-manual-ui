@@ -4,6 +4,7 @@ import TopHUD from './hud/TopHUD'
 import RouteTabs from './nav/RouteTabs'
 import { useViewportUnits } from './hooks/useViewportUnits'
 import { useKeyboard } from './hooks/useKeyboard'
+import { featureFlag } from '../flags'
 import './styles/mobile.css'
 
 // Import actual page components
@@ -16,12 +17,36 @@ import HydrantDischarge from './pages/hydrant/HydrantDischarge'
 import HydrantAdvisor from './pages/hydrant/HydrantAdvisor'
 
 // Feature flag - can be disabled by setting VITE_MOBILE_APP_UI=false
-const MOBILE_UI_ENABLED = import.meta.env.VITE_MOBILE_APP_UI !== 'false'
+// Can be overridden via query parameter: ?flag:mobile_app_ui=1
+// When disabled, the entire mobile UI is hidden and desktop layout is used
+const MOBILE_UI_ENABLED = featureFlag('MOBILE_APP_UI', false)
 
 interface MobileShellProps {
   mode: 'panel' | 'hydrant_lab'
 }
 
+/**
+ * MobileShell - Main mobile UI container for Fire Pump Simulator
+ * 
+ * Feature Flag Gating:
+ * - Controlled by VITE_MOBILE_APP_UI environment variable (default: false)
+ * - Can be overridden via URL: ?flag:mobile_app_ui=1
+ * - When flag is OFF, this component returns null (desktop layout used)
+ * 
+ * Viewport Detection:
+ * - Activates for viewports ≤ 1024px
+ * - Can be force-enabled via query param: ?m=1
+ * 
+ * Components:
+ * - TopHUD: Situational awareness header with collapsible behavior
+ * - RouteTabs: Bottom navigation bar with mode switching
+ * - Page content: Dynamic based on active mode/tab
+ * 
+ * Responsive Breakpoints:
+ * - Mobile: < 768px (primary target)
+ * - Tablet: 768px - 1024px (experimental)
+ * - Desktop: > 1024px (uses standard UI)
+ */
 export default function MobileShell({ mode }: MobileShellProps) {
   // Guard: feature flag
   if (!MOBILE_UI_ENABLED) return null
