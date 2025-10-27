@@ -1,0 +1,17 @@
+{
+  "attack_lines": {
+    "1.75": 15.5,
+    "2.5": 2.0
+  },
+  "supply_lines": {
+    "3.0": 0.8,
+    "4.0": 0.2,
+    "5.0": 0.025
+  },
+  "metadata": {
+    "source": "IFSTA / Field calibration 2022",
+    "notes": "5-inch uses field-calibrated 0.025 vs standard 0.08. Represents modern hose with reduced friction.",
+    "formula": "FL = C × (Q/100)² × (L/100)",
+    "units": "psi per 100 ft"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "nozzles": [
+    {
+      "type": "smooth_bore",
+      "diameter_inches": 1.125,
+      "coefficient": 29.7,
+      "rated_pressure_psi": 50,
+      "notes": "Freeman formula: Q = 29.7 × d² × √NP"
+    },
+    {
+      "type": "smooth_bore",
+      "diameter_inches": 1.5,
+      "coefficient": 29.7,
+      "rated_pressure_psi": 50
+    },
+    {
+      "type": "fog",
+      "rated_flow_gpm": 95,
+      "rated_pressure_psi": 100,
+      "flow_constant": true,
+      "notes": "Constant flow fog nozzle"
+    },
+    {
+      "type": "fog",
+      "rated_flow_gpm": 125,
+      "rated_pressure_psi": 100,
+      "flow_constant": true
+    },
+    {
+      "type": "fog",
+      "rated_flow_gpm": 150,
+      "rated_pressure_psi": 100,
+      "flow_constant": true
+    }
+  ],
+  "metadata": {
+    "source": "NFPA standards and manufacturer specs",
+    "freeman_derivation": "Flow = 29.7 × diameter² × √pressure"
+  }
+}

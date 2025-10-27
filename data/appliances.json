@@ -1,0 +1,16 @@
+{
+  "appliances": {
+    "gate_valve": 2,
+    "storz_adapter": 3,
+    "HAV_bypass": 4,
+    "HAV_boost": -10,
+    "wye_siamesed": 10,
+    "master_stream_device": 25,
+    "generic_discharge_loss": 10
+  },
+  "units": "psi",
+  "metadata": {
+    "source": "AI Technical Guide Section 3.3 and IFSTA",
+    "notes": "Negative values indicate pressure boost (HAV in boost mode)"
+  }
+}
