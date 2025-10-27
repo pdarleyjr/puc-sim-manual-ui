@@ -12,7 +12,6 @@
  */
 
 import frictionCoeffs from '../../data/friction_coeffs.json';
-import nozzles from '../../data/nozzles.json';
 import appliances from '../../data/appliances.json';
 
 // Types
