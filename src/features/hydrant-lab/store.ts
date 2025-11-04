@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { solveHydrantSystem } from './math'
+import { featureFlag } from '../../flags'
+import { solveHydrantSystemV2, computeDischargesV2 } from '../../engine/calcEngineV2Adapter'
 
 export type PortId = 'sideA' | 'steamer' | 'sideB'
 
@@ -368,24 +370,53 @@ export const useHydrantLab = create<LabState>((set, get) => ({
   recompute: () => {
     const s = get()
     
-    // Compute supply side (hydrant to pump intake)
-    const { engineIntakePsi, totalInflowGpm, hydrantResidualPsi } =
-      solveHydrantSystem(s)
+    // Feature flag: VITE_CALC_ENGINE_V2
+    // When enabled, uses calcEngineV2 (pure functional hydraulics engine)
+    // When disabled, uses legacy math.ts solver (iterative convergence)
+    // Override via query param: ?flag:calc_engine_v2=1
+    const useV2Engine = featureFlag('CALC_ENGINE_V2', false)
+    
+    let engineIntakePsi: number
+    let totalInflowGpm: number
+    let hydrantResidualPsi: number
+    
+    if (useV2Engine) {
+      // Use calcEngineV2 adapter for supply side calculations
+      const supplyResult = solveHydrantSystemV2(s)
+      engineIntakePsi = supplyResult.engineIntakePsi
+      totalInflowGpm = supplyResult.totalInflowGpm
+      hydrantResidualPsi = supplyResult.hydrantResidualPsi
+    } else {
+      // Use legacy math.ts solver (default, backward compatible)
+      const supplyResult = solveHydrantSystem(s)
+      engineIntakePsi = supplyResult.engineIntakePsi
+      totalInflowGpm = supplyResult.totalInflowGpm
+      hydrantResidualPsi = supplyResult.hydrantResidualPsi
+    }
     
     // Compute discharge side (pump to nozzles)
+    // Both engines use the same discharge computation for now
     const { 
       totalDemand, 
       totalFlow, 
       cavitating, 
       governorLimited,
       updatedLines 
-    } = computeDischarges(
-      s.dischargeLines,
-      s.pumpDischargePressurePsi,
-      totalInflowGpm,
-      engineIntakePsi,
-      s.governorPsi
-    )
+    } = useV2Engine
+      ? computeDischargesV2(
+          s.dischargeLines,
+          s.pumpDischargePressurePsi,
+          totalInflowGpm,
+          engineIntakePsi,
+          s.governorPsi
+        )
+      : computeDischarges(
+          s.dischargeLines,
+          s.pumpDischargePressurePsi,
+          totalInflowGpm,
+          engineIntakePsi,
+          s.governorPsi
+        )
     
     set({ 
       engineIntakePsi, 

@@ -269,4 +269,16 @@ A specialized operation to increase pressure in a supply line from a weak hydran
 - Utah Valley University Fire Science Friction Loss Tables
 - Heavy Hydrant Hookups Research (Fire Apparatus Magazine, 2022)
 - USFA Water Supply Systems and Evaluation Methods Volume II
-- Fire Hydrants and Apparatus Water Supply (textbook)
+- Fire Hydrants and Apparatus Water Supply (textbook)  
+## November 2025 Updates  
+  
+**New Documentation:**  
+- CALC_ENGINE_V2_INTEGRATION.md - CalcEngineV2 pure functional engine  
+- MOBILE_UI_GUIDE.md - Mobile UX architecture  
+  
+**Feature Flags:**  
+- VITE_CALC_ENGINE_V2 (default OFF)  
+- VITE_MOBILE_APP_UI (default OFF)  
+  
+**Test Coverage:** 139 tests (122 legacy + 17 V2)  
+**HAV Tests:** 24 comprehensive tests 

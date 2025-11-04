@@ -13,6 +13,8 @@
  * - Heavy Hydrant Hookups field research (Fire Apparatus Magazine)
  */
 
+import frictionCoeffsData from '../../data/friction_coeffs.json'
+
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
@@ -51,16 +53,15 @@ export type HAVConfig = {
  * research (Fire Apparatus Magazine, 2022) which showed:
  * - 5″ × 200ft @ 2000 gpm ≈ 20-25 psi hose FL (before hydrant body & intake plumbing)
  * 
- * Standard published coefficients (0.08, 0.20, 0.80) appear to be for different
- * formula variants. These values are field-calibrated.
+ * All values imported from friction_coeffs.json (single source of truth)
  * 
  * Source: Heavy Hydrant Hookups field tests
- * Source: National Fire Equipment friction loss data (adjusted for field reality)
+ * Source: friction_coeffs.json
  */
 const FRICTION_COEFFICIENTS: Record<SupplyLeg['diameterIn'], number> = {
-  3: 0.50,   // 3″ hose - calibrated to field data
-  4: 0.12,   // 4″ LDH - interpolated
-  5: 0.025,  // 5″ LDH - calibrated to ~25 psi @ 2000 gpm / 200ft
+  3: frictionCoeffsData.supply_lines["3.0"],
+  4: frictionCoeffsData.supply_lines["4.0"],
+  5: frictionCoeffsData.supply_lines["5.0"],
 }
 
 /**

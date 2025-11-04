@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useHydrantLab } from './store'
 import { HydrantCanvas } from './HydrantCanvas'
 import { EngineIntakePuck } from './EngineIntakePuck'
@@ -7,6 +7,7 @@ import { StatsStrip } from './StatsStrip'
 import { AdvisorChips } from './AdvisorChips'
 import { HosePaths } from './HosePaths'
 import { DischargePanel } from './DischargePanel'
+import ComparisonDevPage from './ComparisonDevPage'
 
 function Pill({ 
   label, 
@@ -71,6 +72,7 @@ function IconButton({
 
 export function HydrantLabScreen() {
   const s = useHydrantLab()
+  const [showComparison, setShowComparison] = useState(false)
   
   // Initial computation on mount only
   useEffect(() => {
@@ -103,6 +105,11 @@ export function HydrantLabScreen() {
         </div>
         <div className="flex gap-2">
           <OutlineButton>A/B Compare</OutlineButton>
+          {import.meta.env.DEV && (
+            <OutlineButton onClick={() => setShowComparison(true)}>
+              🔬 Compare Engines
+            </OutlineButton>
+          )}
           <IconButton aria-label="Mini tour">?</IconButton>
         </div>
       </div>
@@ -148,6 +155,19 @@ export function HydrantLabScreen() {
           </div>
         </div>
       </div>
+      
+      {/* Dev Mode: Engine Comparison Modal */}
+      {showComparison && (
+        <div className="fixed inset-0 z-50">
+          <ComparisonDevPage />
+          <button
+            onClick={() => setShowComparison(false)}
+            className="fixed top-4 right-4 z-[60] px-4 py-2 bg-gray-800 text-white rounded-lg shadow-lg hover:bg-gray-700"
+          >
+            ✕ Close Comparison
+          </button>
+        </div>
+      )}
     </div>
   )
 }
