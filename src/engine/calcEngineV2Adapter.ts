@@ -16,15 +16,13 @@ import {
   calcFrictionLoss,
   calcNozzleFlow,
   calcApplianceLoss,
-  calcRequiredPDP,
-  solveIntakePressure,
   calcPumpPerformance,
   calcHydrantFlow,
   type HoseConfig,
   type NozzleConfig,
   type DischargeConfig
 } from './calcEngineV2'
-import type { Leg, PortId, Hav, DischargeLine, NozzleType, NozzleSpec } from '../features/hydrant-lab/store'
+import type { Leg, PortId, Hav, DischargeLine } from '../features/hydrant-lab/store'
 import { NOZZLE_LIBRARY } from '../features/hydrant-lab/store'
 
 /**
@@ -33,7 +31,7 @@ import { NOZZLE_LIBRARY } from '../features/hydrant-lab/store'
  */
 function transformSupplyLegs(
   legs: Record<PortId, Leg | null>,
-  hav: Hav
+  _hav: Hav
 ): HoseConfig[] {
   const openLegs = Object.values(legs)
     .filter(Boolean)
@@ -87,7 +85,7 @@ function transformDischargeLine(line: DischargeLine): DischargeConfig {
  * Calculate total appliance losses for supply side
  * This handles HAV boost/bypass and adapter losses that aren't in calcEngineV2's HoseConfig
  */
-function calculateSupplyAppliances(legs: Record<PortId, Leg | null>, hav: Hav): number {
+export function calculateSupplyAppliances(legs: Record<PortId, Leg | null>, hav: Hav): number {
   let totalLoss = 0
   
   // HAV bypass loss (on steamer in bypass mode)
@@ -179,7 +177,8 @@ export function solveHydrantSystemV2(state: {
     return { leg, resistance }
   })
   
-  const totalConductance = legData.reduce((sum, ld) => sum + (1 / ld.resistance), 0)
+  // Note: totalConductance calculated but not currently used
+  // const totalConductance = legData.reduce((sum, ld) => sum + (1 / ld.resistance), 0)
   
   // Calculate available pressure for friction
   const HYDRANT_MAIN_FLOOR = 20
@@ -287,7 +286,7 @@ export function computeDischargesV2(
   pdpPsi: number,
   supplyGpm: number,
   intakePsi: number,
-  governorPsi: number
+  _governorPsi: number
 ): {
   totalDemand: number
   totalFlow: number
