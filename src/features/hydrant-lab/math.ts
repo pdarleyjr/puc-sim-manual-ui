@@ -1,13 +1,19 @@
 import { nozzleSmoothBoreGpm, pumpCurveMaxGpm } from '../../lib/hydraulics'
+import frictionCoeffsData from '../../../data/friction_coeffs.json'
+
+// FL coefficients loaded from friction_coeffs.json (single source of truth)
+// Formula: FL = C × (Q/100)² × (L/100) where Q is in hundreds of GPM
+// Field-calibrated values, particularly for 5" LDH which uses 0.025 instead of 0.08
+const FRICTION_COEFFS = {
+  1.75: frictionCoeffsData.attack_lines["1.75"],
+  2.5: frictionCoeffsData.attack_lines["2.5"],
+  3: frictionCoeffsData.supply_lines["3.0"],
+  4: frictionCoeffsData.supply_lines["4.0"],
+  5: frictionCoeffsData.supply_lines["5.0"]
+}
 
 // FL coefficients per AI_AGENT_TECHNICAL_GUIDE.md and NFPA/IFSTA reference tables
 // Formula: FL = C × (Q/100)² × (L/100) where Q is in hundreds of GPM
-const C_1_75IN = 15.5  // 1.75" hose per Utah Valley University / IFSTA
-const C_2_5IN = 2.0    // 2.5" hose standard coefficient
-const C_3IN = 0.8      // 3" hose per technical guide Table 3.2
-const C_4IN = 0.2      // 4" LDH standard coefficient
-const C_5IN = 0.08     // 5" LDH per IFSTA/NFPA standards
-
 const APPLIANCE_MS = 25  // Master stream device loss (per guide section 3.1)
 const ADAPTER_SIDE_5IN = 3  // 2.5" to Storz adapter on side ports
 const GATE_VALVE_LOSS = 2  // Gate valve loss at high flows
@@ -17,14 +23,8 @@ const HAV_BYPASS_LOSS = 4  // HAV bypass mode internal loss
  * Get friction loss coefficient for a given hose diameter
  */
 function getFrictionCoefficient(diameterIn: number): number {
-  const coefficients: Record<number, number> = {
-    1.75: C_1_75IN,
-    2.5: C_2_5IN,
-    3: C_3IN,
-    4: C_4IN,
-    5: C_5IN
-  }
-  return coefficients[diameterIn] || C_3IN
+  const coefficients: Record<number, number> = FRICTION_COEFFS
+  return coefficients[diameterIn] || FRICTION_COEFFS[3]
 }
 
 /**

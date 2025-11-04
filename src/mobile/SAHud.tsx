@@ -7,6 +7,7 @@ import {
   selectMasterDischargePsi
 } from '../state/selectors'
 import { useCollapseHeader } from './hooks/useCollapseHeader'
+import { useHydrantLab } from '../features/hydrant-lab/store'
 
 /**
  * SAHud - Situational Awareness Heads-Up Display
@@ -55,6 +56,7 @@ export default function SAHud() {
   const foamPct = useStore(selectFoamPct)
   const intakePsi = useStore(selectMasterIntakePsi)
   const dischargePsi = useStore(selectMasterDischargePsi)
+  const intakeGpm = useHydrantLab(state => state.totalInflowGpm)
   
   const { governorMode, governorSetpoint, setGovernorSetPsi, setGovernorSetRpm } = useStore(
     useShallow(state => ({
@@ -70,6 +72,7 @@ export default function SAHud() {
   // Color coding for warnings (HMI best practice - calm until out of range)
   const tankColor = tankPct < 10 ? 'text-red-400' : tankPct < 25 ? 'text-amber-400' : 'text-slate-100'
   const foamColor = foamPct < 10 ? 'text-red-400' : 'text-slate-100'
+  const intakeGpmColor = intakeGpm < 250 ? 'text-red-400' : intakeGpm < 500 ? 'text-amber-400' : 'text-green-400'
   const intakeColor = intakePsi < 10 ? 'text-red-400' : intakePsi < 20 ? 'text-amber-400' : 'text-slate-100'
   const dischargeColor = dischargePsi > 300 ? 'text-red-400' : dischargePsi > 250 ? 'text-amber-400' : 'text-slate-100'
   
@@ -90,7 +93,7 @@ export default function SAHud() {
       }`}
       data-compact={isCompact}
     >
-      <div className="grid grid-cols-5 gap-1 h-full items-center px-2 font-mono text-[11px] tabular-nums">
+      <div className="grid grid-cols-3 gap-1 h-full items-center px-2 font-mono text-[11px] tabular-nums">
         {/* Water % */}
         <div className="text-center">
           <div className="text-[9px] text-slate-400 uppercase tracking-wide">Water</div>
@@ -101,6 +104,12 @@ export default function SAHud() {
         <div className="text-center">
           <div className="text-[9px] text-slate-400 uppercase tracking-wide">Foam</div>
           <div className={`text-[14px] font-bold ${foamColor}`}>{foamPct}%</div>
+        </div>
+        
+        {/* Intake GPM - NEW */}
+        <div className="text-center">
+          <div className="text-[9px] text-slate-400 uppercase tracking-wide">In GPM</div>
+          <div className={`text-[14px] font-bold ${intakeGpmColor}`}>{Math.round(intakeGpm)}</div>
         </div>
         
         {/* Intake PSI */}
