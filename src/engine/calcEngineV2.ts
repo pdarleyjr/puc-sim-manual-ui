@@ -236,3 +236,107 @@ export function calcPumpPerformance(
     return slope * (flowPercent - 1.0) + intercept;
   }
 }
+
+/**
+ * Friction loss calculation parameters.
+ * Supports two modes:
+ * 1. 'psi_per100': Direct psi/100' value (from preset or override)
+ * 2. 'coefficient': Uses standard FL formula with C coefficient
+ * 
+ * Formula: FL = C × (Q/100)² × (L/100)
+ * Reference: Task Force Tips - Hydraulic Calculations Every Firefighter Needs to Know
+ * https://tft.com/hydraulic-calculations-every-firefighter-needs-to-know/
+ */
+export interface FrictionLossParams {
+  gpm: number
+  lengthFt: number
+  mode: 'psi_per100' | 'coefficient'
+  value: number  // psi/100' value or C coefficient, depending on mode
+}
+
+/**
+ * Friction loss calculation result with detailed breakdown
+ */
+export interface FrictionLossResult {
+  totalPsi: number      // Total friction loss for the entire line
+  psiPer100: number     // Friction loss per 100 feet
+  coeffUsed: number     // C coefficient used (calculated if in psi_per100 mode)
+  formula: string       // Human-readable formula used
+}
+
+/**
+ * Compute friction loss for a hose line.
+ * Supports both preset (psi/100') and coefficient-based calculation modes.
+ * 
+ * @param params - Friction loss parameters
+ * @returns Detailed friction loss result
+ */
+export function computeLineFrictionLoss(params: FrictionLossParams): FrictionLossResult {
+  const { gpm, lengthFt, mode, value } = params
+  const L100 = lengthFt / 100
+  
+  if (mode === 'psi_per100') {
+    // Direct psi/100' mode (from preset or user override)
+    const psiPer100 = value
+    const totalPsi = psiPer100 * L100
+    // Back-calculate coefficient for transparency
+    const Q100 = gpm / 100
+    const coeffUsed = Q100 > 0 ? psiPer100 / (Q100 * Q100) : 0
+    
+    return {
+      totalPsi,
+      psiPer100,
+      coeffUsed,
+      formula: `FL = ${psiPer100.toFixed(1)} psi/100' × ${L100.toFixed(2)} = ${totalPsi.toFixed(1)} psi`
+    }
+  } else {
+    // Coefficient mode: FL = C × (Q/100)² × (L/100)
+    const C = value
+    const Q100 = gpm / 100
+    const totalPsi = C * Q100 * Q100 * L100
+    const psiPer100 = gpm > 0 ? totalPsi / L100 : 0
+    
+    return {
+      totalPsi,
+      psiPer100,
+      coeffUsed: C,
+      formula: `FL = ${C} × (${gpm}/100)² × ${L100.toFixed(2)} = ${totalPsi.toFixed(1)} psi`
+    }
+  }
+}
+
+/**
+ * Convert a psi/100' value to its equivalent C coefficient at a given flow rate.
+ * Useful for allowing users to input psi/100' while maintaining internal consistency.
+ * 
+ * Formula: C = (psi/100') / (Q/100)²
+ * 
+ * @param psiPer100 - Friction loss in psi per 100 feet
+ * @param referenceGpm - Reference flow rate in GPM
+ * @returns C coefficient
+ */
+export function convertPsiPer100ToCoefficient(
+  psiPer100: number,
+  referenceGpm: number
+): number {
+  if (referenceGpm <= 0) return 0
+  const Q100 = referenceGpm / 100
+  return psiPer100 / (Q100 * Q100)
+}
+
+/**
+ * Convert a C coefficient to psi/100' at a given flow rate.
+ * 
+ * Formula: psi/100' = C × (Q/100)²
+ * 
+ * @param coefficient - Friction loss coefficient
+ * @param referenceGpm - Reference flow rate in GPM
+ * @returns Friction loss in psi per 100 feet
+ */
+export function convertCoefficientToPsiPer100(
+  coefficient: number,
+  referenceGpm: number
+): number {
+  const Q100 = referenceGpm / 100
+  return coefficient * Q100 * Q100
+}
