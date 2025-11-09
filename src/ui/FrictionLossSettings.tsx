@@ -1,4 +1,3 @@
-import React from 'react'
 import { useStore } from '../state/store'
 import hoseFLPresets from '../../data/hose_fl_presets.json'
 

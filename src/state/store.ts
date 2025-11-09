@@ -437,21 +437,6 @@ function persistFLOverrides(discharges: Record<DischargeId, Discharge>) {
   }
 }
 
-/**
- * Load FL overrides from localStorage
- */
-function loadFLOverrides(): Record<string, { flMode: 'preset' | 'coefficient'; flOverride: any }> {
-  const stored = localStorage.getItem('puc_friction_loss_overrides')
-  if (stored) {
-    try {
-      return JSON.parse(stored)
-    } catch (e) {
-      console.warn('Failed to load FL overrides', e)
-    }
-  }
-  return {}
-}
-
 export const useStore = create<AppState>((set, get) => {
   return {
   pumpEngaged: false,
@@ -1309,4 +1294,4 @@ export const useStore = create<AppState>((set, get) => {
       }
     })
   },
-}})
+}}
