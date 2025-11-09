@@ -1,6 +1,8 @@
 import { useStore } from '../../state/store'
 import { selectTankPct, selectFoamPct, selectMasterIntakePsi, selectMasterDischargePsi } from '../../state/selectors'
 import GovernorChip from './GovernorChip'
+import { computeLineFrictionLoss } from '../../engine/calcEngineV2'
+import { getEffectiveFLValue } from '../../state/store'
 
 interface HUDPillProps {
   label: string
@@ -31,11 +33,38 @@ export default function TopHUD() {
   const foam = useStore(selectFoamPct)
   const inPsi = useStore(selectMasterIntakePsi)
   const outPsi = useStore(selectMasterDischargePsi)
+  const discharges = useStore(state => state.discharges)
+  
+  // Calculate total FL across all active discharges
+  const hasActiveDischarges = Object.values(discharges).some(d => d.open && d.gpmNow > 0)
+  
+  const totalFL = Object.values(discharges)
+    .filter(d => d.open && d.gpmNow > 0)
+    .reduce((sum, discharge) => {
+      const flMode = discharge.hoseConfig.flMode
+      const flValue = getEffectiveFLValue(discharge)
+      const flResult = computeLineFrictionLoss({
+        gpm: discharge.gpmNow,
+        lengthFt: discharge.hoseConfig.lengthFt,
+        mode: flMode === 'preset' ? 'psi_per100' : 'coefficient',
+        value: flMode === 'preset'
+          ? flValue
+          : flValue
+      })
+      return sum + flResult.totalPsi
+    }, 0)
   
   return (
     <header className="h-[88px] px-3 grid grid-cols-5 items-center gap-2 bg-[#0f141a]/95 backdrop-blur border-b border-[#232b35]">
       <HUDPill label="WATER" value={`${water}%`} />
-      <HUDPill label="FOAM" value={`${foam}%`} />
+      
+      {/* Show Total FL when there are active discharges, otherwise show FOAM */}
+      {hasActiveDischarges ? (
+        <HUDPill label="TOTAL FL" value={Math.round(totalFL)} unit="PSI" />
+      ) : (
+        <HUDPill label="FOAM" value={`${foam}%`} />
+      )}
+      
       <HUDPill 
         label="INTAKE" 
         value={inPsi} 

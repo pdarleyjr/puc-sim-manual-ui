@@ -20,6 +20,7 @@ import {
   INTAKE_SAG_PSI_PER_GPM,
 } from './constants'
 import { initScenario, tickScenario, type ScenarioExecutor } from './scenarios'
+import hoseFLPresets from '../../data/hose_fl_presets.json'
 
 export type Source = 'none' | 'tank' | 'hydrant'
 export type DischargeId = 'xlay1' | 'xlay2' | 'xlay3' | 'trashline' | 'twohalfA' | 'twohalfB' | 'twohalfC' | 'twohalfD' | 'deckgun'
@@ -77,10 +78,11 @@ export interface ScenarioCtx {
 }
 
 // Assignment types
-export type AssignmentType = 'handline_175_fog' | 'fdc_standpipe' | 'skid_leader' | 'blitzfire' | 'portable_standpipe' | 'deck_gun'
+export type AssignmentType = 'handline_175_fog' | 'handline_250_smooth' | 'fdc_standpipe' | 'skid_leader' | 'blitzfire' | 'portable_standpipe' | 'deck_gun'
 
 export type AssignmentConfig =
   | { type: 'handline_175_fog' }
+  | { type: 'handline_250_smooth' }
   | { type: 'fdc_standpipe'; floors: number }
   | { type: 'skid_leader'; setbackFt: number }
   | { type: 'blitzfire'; mode: 'low55' | 'std100'; len3inFt: number }
@@ -138,7 +140,21 @@ export interface Discharge {
   foamCapable: boolean
   lengthFt: number
   assignment: AssignmentConfig  // NEW: assignment configuration
-  evolutionId?: string    // NEW: evolution ID for 2½" lines
+  
+  // NEW: Physical hose configuration
+  hoseConfig: {
+    diameter: 1.75 | 2.5 | 3.0  // Physical hose inner diameter in inches
+    lengthFt: number             // Total hose length in feet
+    presetId?: string            // Reference to preset in hose_fl_presets.json
+    flMode: 'preset' | 'coefficient'  // Calculation mode
+    flOverride?: {
+      psiPer100?: number         // Override for psi/100' mode
+      coefficient?: number       // Override for coefficient mode
+    }
+  }
+  
+  evolutionId?: string     // Optional evolution assignment (for 2½" lines and deck gun)
+  
   gpmNow: number
   gallonsThisEng: number
   displayPsi: number      // Damped display value for gauge (cosmetic only)
@@ -289,6 +305,17 @@ function computeAssignmentFlow(P_line_at_panel: number, assignment: AssignmentCo
       const { gpm } = computeFogFlowFromPdp(P_line_at_panel, LEN_CROSSLAY)
       return gpm
     }
+    
+    case 'handline_250_smooth': {
+      // 2½" handline with smooth bore nozzle
+      // Use similar computation to 1¾" fog but with 2.5" hose coefficient (C=2.0)
+      const C_25 = 2.0  // Coefficient for 2½" hose
+      const length = LEN_TWOHALF_A
+      const a = (1 / (K_FACTOR * K_FACTOR)) + (C_25 * (length / 1_000_000))
+      const q2 = P_line_at_panel / a
+      const gpm = Math.sqrt(Math.max(0, q2))
+      return gpm
+    }
 
     case 'fdc_standpipe': {
       // FDC: 3″ supply + elevation + standpipe + 200' HRP (1¾″) + smooth bore
@@ -356,7 +383,77 @@ function damp(current: number, target: number, rate: number = 0.3): number {
   return current + delta * rate
 }
 
-export const useStore = create<AppState>((set, get) => ({
+/**
+ * Get the effective friction loss value for a discharge line.
+ * Respects user overrides and falls back to preset defaults.
+ * 
+ * @param discharge - Discharge configuration
+ * @returns FL value (either psi/100' or coefficient, depending on mode)
+ */
+export function getEffectiveFLValue(discharge: Discharge): number {
+  const { hoseConfig } = discharge
+  
+  // Check for user override first
+  if (hoseConfig.flOverride) {
+    if (hoseConfig.flMode === 'preset' && hoseConfig.flOverride.psiPer100 !== undefined) {
+      return hoseConfig.flOverride.psiPer100
+    }
+    if (hoseConfig.flMode === 'coefficient' && hoseConfig.flOverride.coefficient !== undefined) {
+      return hoseConfig.flOverride.coefficient
+    }
+  }
+  
+  // Fall back to preset defaults from hose_fl_presets.json
+  if (hoseConfig.presetId && hoseFLPresets.presets[hoseConfig.presetId as keyof typeof hoseFLPresets.presets]) {
+    const preset = hoseFLPresets.presets[hoseConfig.presetId as keyof typeof hoseFLPresets.presets]
+    return hoseConfig.flMode === 'preset' ? preset.default_psi_per_100ft : preset.coefficient
+  }
+  
+  // Final fallback based on diameter (coefficient values)
+  if (hoseConfig.diameter === 1.75) return 15.5
+  if (hoseConfig.diameter === 2.5) return 2.0
+  return 2.0
+}
+
+/**
+ * Persist FL overrides to localStorage
+ */
+function persistFLOverrides(discharges: Record<DischargeId, Discharge>) {
+  const overrides: Record<string, any> = {}
+  
+  Object.entries(discharges).forEach(([id, discharge]) => {
+    if (discharge.hoseConfig?.flOverride) {
+      overrides[id] = {
+        flMode: discharge.hoseConfig.flMode,
+        flOverride: discharge.hoseConfig.flOverride
+      }
+    }
+  })
+  
+  if (Object.keys(overrides).length > 0) {
+    localStorage.setItem('puc_friction_loss_overrides', JSON.stringify(overrides))
+  } else {
+    localStorage.removeItem('puc_friction_loss_overrides')
+  }
+}
+
+/**
+ * Load FL overrides from localStorage
+ */
+function loadFLOverrides(): Record<string, { flMode: 'preset' | 'coefficient'; flOverride: any }> {
+  const stored = localStorage.getItem('puc_friction_loss_overrides')
+  if (stored) {
+    try {
+      return JSON.parse(stored)
+    } catch (e) {
+      console.warn('Failed to load FL overrides', e)
+    }
+  }
+  return {}
+}
+
+export const useStore = create<AppState>((set, get) => {
+  return {
   pumpEngaged: false,
   source: 'none',
   foamEnabled: false,
@@ -385,6 +482,12 @@ export const useStore = create<AppState>((set, get) => ({
       foamCapable: true, 
       lengthFt: LEN_CROSSLAY, 
       assignment: { type: 'handline_175_fog' },
+      hoseConfig: {
+        diameter: 1.75,
+        lengthFt: LEN_CROSSLAY,
+        presetId: 'key_combat_ready_175',
+        flMode: 'preset'
+      },
       gpmNow: 0, 
       gallonsThisEng: 0,
       displayPsi: 0
@@ -397,6 +500,12 @@ export const useStore = create<AppState>((set, get) => ({
       foamCapable: true, 
       lengthFt: LEN_CROSSLAY, 
       assignment: { type: 'handline_175_fog' },
+      hoseConfig: {
+        diameter: 1.75,
+        lengthFt: LEN_CROSSLAY,
+        presetId: 'key_combat_ready_175',
+        flMode: 'preset'
+      },
       gpmNow: 0, 
       gallonsThisEng: 0,
       displayPsi: 0
@@ -409,6 +518,12 @@ export const useStore = create<AppState>((set, get) => ({
       foamCapable: true, 
       lengthFt: LEN_CROSSLAY, 
       assignment: { type: 'handline_175_fog' },
+      hoseConfig: {
+        diameter: 1.75,
+        lengthFt: LEN_CROSSLAY,
+        presetId: 'key_combat_ready_175',
+        flMode: 'preset'
+      },
       gpmNow: 0, 
       gallonsThisEng: 0,
       displayPsi: 0
@@ -421,6 +536,12 @@ export const useStore = create<AppState>((set, get) => ({
       foamCapable: false, 
       lengthFt: LEN_TRASHLINE, 
       assignment: { type: 'handline_175_fog' },
+      hoseConfig: {
+        diameter: 1.75,
+        lengthFt: LEN_TRASHLINE,
+        presetId: 'key_combat_ready_175',
+        flMode: 'preset'
+      },
       gpmNow: 0, 
       gallonsThisEng: 0,
       displayPsi: 0
@@ -432,7 +553,13 @@ export const useStore = create<AppState>((set, get) => ({
       valvePercent: 0, 
       foamCapable: true, 
       lengthFt: LEN_TWOHALF_A, 
-      assignment: { type: 'handline_175_fog' },
+      assignment: { type: 'handline_250_smooth' },
+      hoseConfig: {
+        diameter: 2.5,
+        lengthFt: LEN_TWOHALF_A,
+        presetId: 'key_big10_25_low',
+        flMode: 'preset'
+      },
       gpmNow: 0, 
       gallonsThisEng: 0,
       displayPsi: 0
@@ -444,7 +571,13 @@ export const useStore = create<AppState>((set, get) => ({
       valvePercent: 0, 
       foamCapable: true, 
       lengthFt: LEN_TWOHALF_A, 
-      assignment: { type: 'handline_175_fog' },
+      assignment: { type: 'handline_250_smooth' },
+      hoseConfig: {
+        diameter: 2.5,
+        lengthFt: LEN_TWOHALF_A,
+        presetId: 'key_big10_25_low',
+        flMode: 'preset'
+      },
       gpmNow: 0, 
       gallonsThisEng: 0,
       displayPsi: 0
@@ -456,7 +589,13 @@ export const useStore = create<AppState>((set, get) => ({
       valvePercent: 0, 
       foamCapable: true, 
       lengthFt: LEN_TWOHALF_A, 
-      assignment: { type: 'handline_175_fog' },
+      assignment: { type: 'handline_250_smooth' },
+      hoseConfig: {
+        diameter: 2.5,
+        lengthFt: LEN_TWOHALF_A,
+        presetId: 'key_big10_25_low',
+        flMode: 'preset'
+      },
       gpmNow: 0, 
       gallonsThisEng: 0,
       displayPsi: 0
@@ -468,7 +607,13 @@ export const useStore = create<AppState>((set, get) => ({
       valvePercent: 0, 
       foamCapable: true, 
       lengthFt: LEN_TWOHALF_A, 
-      assignment: { type: 'handline_175_fog' },
+      assignment: { type: 'handline_250_smooth' },
+      hoseConfig: {
+        diameter: 2.5,
+        lengthFt: LEN_TWOHALF_A,
+        presetId: 'key_big10_25_low',
+        flMode: 'preset'
+      },
       gpmNow: 0, 
       gallonsThisEng: 0,
       displayPsi: 0
@@ -481,6 +626,11 @@ export const useStore = create<AppState>((set, get) => ({
       foamCapable: false, 
       lengthFt: 0, // Piped, no hose
       assignment: { type: 'deck_gun', tip: '1_1/2' },
+      hoseConfig: {
+        diameter: 3.0,
+        lengthFt: 0,
+        flMode: 'coefficient'
+      },
       gpmNow: 0, 
       gallonsThisEng: 0,
       displayPsi: 0
@@ -621,26 +771,65 @@ export const useStore = create<AppState>((set, get) => ({
   setLine: (id, patch) => {
     const oldState = get().discharges[id]
     
-    // Log significant changes
-    if (patch.open !== undefined && patch.open !== oldState.open) {
-      get().log('DISCHARGE_VALVE', { line: id, open: patch.open })
-    }
-    if (patch.valvePercent !== undefined && patch.valvePercent !== oldState.valvePercent) {
-      get().log('DISCHARGE_VALVE_PCT', { line: id, percent: patch.valvePercent })
-    }
-    if (patch.assignment !== undefined && patch.assignment.type !== oldState.assignment.type) {
-      get().log('DISCHARGE_ASSIGNMENT', { line: id, assignment: patch.assignment.type })
-    }
-    if (patch.evolutionId !== undefined && patch.evolutionId !== oldState.evolutionId) {
-      get().log('DISCHARGE_EVOLUTION', { line: id, evolutionId: patch.evolutionId })
+    /**
+     * Valve lever control - realistic pump panel operation.
+     * 
+     * Unlike the previous button-based system, real pump panels use valve
+     * position to control flow. Moving the lever from 0% automatically opens
+     * the discharge. Setting to 0% closes it.
+     * 
+     * Reference: Fire Apparatus Magazine - 2½" Discharge Valve Controllers
+     * https://www.fireapparatusmagazine.com/fire-apparatus/apparatus-purchasing-2½-inch-discharge-valve-controllers/
+     */
+    
+    // Auto-open/auto-close behavior based on valve percentage
+    let finalPatch = { ...patch }
+    
+    if ('valvePercent' in patch && patch.valvePercent !== undefined) {
+      const newPercent = patch.valvePercent
+      const oldPercent = oldState.valvePercent
+      
+      // Auto-open: valve moved from 0% to any positive value
+      if (oldPercent === 0 && newPercent > 0) {
+        finalPatch.open = true
+      }
+      
+      // Auto-close: valve set to 0%
+      if (newPercent === 0) {
+        finalPatch.open = false
+      }
     }
     
-    set({
-      discharges: {
-        ...get().discharges,
-        [id]: { ...get().discharges[id], ...patch },
-      },
-    })
+    // Log significant changes
+    if (finalPatch.open !== undefined && finalPatch.open !== oldState.open) {
+      get().log('DISCHARGE_VALVE', { line: id, open: finalPatch.open })
+    }
+    if (finalPatch.valvePercent !== undefined && finalPatch.valvePercent !== oldState.valvePercent) {
+      get().log('DISCHARGE_VALVE_PCT', { line: id, percent: finalPatch.valvePercent })
+    }
+    if (finalPatch.assignment !== undefined && finalPatch.assignment.type !== oldState.assignment.type) {
+      get().log('DISCHARGE_ASSIGNMENT', { line: id, assignment: finalPatch.assignment.type })
+    }
+    
+    // Handle nested hoseConfig merge properly
+    const updatedDischarge = {
+      ...oldState,
+      ...finalPatch,
+      hoseConfig: finalPatch.hoseConfig 
+        ? { ...oldState.hoseConfig, ...finalPatch.hoseConfig }
+        : oldState.hoseConfig
+    }
+    
+    const newDischarges = {
+      ...get().discharges,
+      [id]: updatedDischarge,
+    }
+    
+    set({ discharges: newDischarges })
+    
+    // Persist FL overrides to localStorage
+    persistFLOverrides(newDischarges)
+    
     get().recomputeMasters()
   },
 
@@ -1120,4 +1309,4 @@ export const useStore = create<AppState>((set, get) => ({
       }
     })
   },
-}))
+}})

@@ -3,6 +3,8 @@ import type { Discharge, DischargeId, AssignmentConfig } from '../state/store'
 import { useStore } from '../state/store'
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { computeLineFrictionLoss, type FrictionLossResult } from '../engine/calcEngineV2'
+import { getEffectiveFLValue } from '../state/store'
 
 interface AssignmentSelectorProps {
   discharge: Discharge
@@ -209,10 +211,6 @@ export function DeckGunCard() {
   const discharge = useStore(state => state.discharges.deckgun)
   const setLine = useStore(state => state.setLine)
 
-  const handleToggle = () => {
-    setLine('deckgun', { open: !discharge.open })
-  }
-
   const handleSetPercent = (percent: number) => {
     setLine('deckgun', { valvePercent: Math.max(0, Math.min(100, percent)) })
   }
@@ -222,8 +220,6 @@ export function DeckGunCard() {
       setLine('deckgun', { assignment: { type: 'deck_gun', tip } })
     }
   }
-
-  const quicksets = [50, 75, 100]
 
   return (
     <div className="puc-card">
@@ -276,49 +272,95 @@ export function DeckGunCard() {
         </div>
       )}
       
-      {/* Open/Closed Toggle */}
-      <div className="mt-4 flex items-center justify-center gap-2">
-        <button
-          onClick={handleToggle}
-          className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-            discharge.open 
-              ? 'bg-emerald-500 text-white' 
-              : 'bg-white/10 text-white/60 hover:bg-white/20'
-          }`}
-        >
-          {discharge.open ? 'OPEN' : 'CLOSED'}
-        </button>
-      </div>
-      
-      {/* Valve % Open Slider */}
-      <div className="mt-3">
-        <label className="text-xs opacity-60">Valve % Open</label>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          step="5"
-          value={discharge.valvePercent}
-          onChange={(e) => handleSetPercent(Number(e.target.value))}
-          className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500"
-        />
-        <div className="text-center text-lg font-bold tabular-nums mt-1">
-          {discharge.valvePercent}%
+      {/* Status Badge & Valve Position Display */}
+      <div className="mt-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm">
+            {discharge.open ? (
+              <span className="inline-flex items-center px-2 py-1 rounded bg-green-900/30 border border-green-700 text-green-300 text-xs font-semibold">
+                ● FLOWING
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-2 py-1 rounded bg-gray-700 border border-gray-600 text-gray-400 text-xs">
+                ○ CLOSED
+              </span>
+            )}
+          </span>
+          <span className="text-lg font-mono text-white font-bold">
+            {discharge.valvePercent}%
+          </span>
         </div>
+        
+        {/* Enhanced Valve Lever Slider */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-300">
+            Valve Position
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value={discharge.valvePercent}
+            onChange={(e) => handleSetPercent(parseInt(e.target.value, 10))}
+            onKeyDown={(e) => {
+              // Arrow keys for fine control
+              if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+                e.preventDefault()
+                handleSetPercent(Math.max(0, discharge.valvePercent - 5))
+              } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+                e.preventDefault()
+                handleSetPercent(Math.min(100, discharge.valvePercent + 5))
+              } else if (e.key === 'Home') {
+                e.preventDefault()
+                handleSetPercent(0)
+              } else if (e.key === 'End') {
+                e.preventDefault()
+                handleSetPercent(100)
+              }
+            }}
+            aria-label={`${discharge.label} valve position`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={discharge.valvePercent}
+            className="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-thumb-custom"
+          />
+          
+          {/* Quick-set buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleSetPercent(0)}
+              className="flex-1 px-2 py-1 text-xs bg-red-900/30 border border-red-700 text-red-300 rounded hover:bg-red-900/50"
+            >
+              CLOSE
+            </button>
+            {[25, 50, 75, 100].map(pct => (
+              <button
+                key={pct}
+                onClick={() => handleSetPercent(pct)}
+                className="px-2 py-1 text-xs bg-gray-700 border border-gray-600 text-gray-300 rounded hover:bg-gray-600"
+              >
+                {pct}%
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        {/* Flow indicator (only shows when open) */}
+        {discharge.open && discharge.gpmNow > 0 && (
+          <div className="text-center py-2 bg-blue-900/30 border border-blue-700 rounded">
+            <div className="text-2xl font-mono text-blue-300 font-bold">
+              {Math.round(discharge.gpmNow)} GPM
+            </div>
+          </div>
+        )}
       </div>
       
-      {/* Quickset buttons */}
-      <div className="mt-2 flex gap-2 justify-center">
-        {quicksets.map(pct => (
-          <button
-            key={pct}
-            onClick={() => handleSetPercent(pct)}
-            className="px-3 py-1 text-xs rounded bg-white/10 hover:bg-white/20 transition-all"
-          >
-            {pct}%
-          </button>
-        ))}
-      </div>
+      {discharge.foamCapable && (
+        <div className="mt-2 text-center text-xs text-pink-400 opacity-60">
+          Foam Capable
+        </div>
+      )}
     </div>
   )
 }
@@ -330,15 +372,9 @@ interface DischargeCardProps {
 export function DischargeCard({ discharge }: DischargeCardProps) {
   const setLine = useStore(state => state.setLine)
 
-  const handleToggle = () => {
-    setLine(discharge.id, { open: !discharge.open })
-  }
-
   const handleSetPercent = (percent: number) => {
     setLine(discharge.id, { valvePercent: Math.max(0, Math.min(100, percent)) })
   }
-
-  const quicksets = [50, 75, 100]
 
   return (
     <div className="puc-card">
@@ -365,48 +401,88 @@ export function DischargeCard({ discharge }: DischargeCardProps) {
       {/* Assignment Selector */}
       <AssignmentSelector discharge={discharge} />
       
-      {/* Open/Closed Toggle */}
-      <div className="mt-4 flex items-center justify-center gap-2">
-        <button
-          onClick={handleToggle}
-          className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-            discharge.open 
-              ? 'bg-emerald-500 text-white' 
-              : 'bg-white/10 text-white/60 hover:bg-white/20'
-          }`}
-        >
-          {discharge.open ? 'OPEN' : 'CLOSED'}
-        </button>
-      </div>
-      
-      {/* Valve % Open Slider */}
-      <div className="mt-3">
-        <label className="text-xs opacity-60">Valve % Open</label>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          step="5"
-          value={discharge.valvePercent}
-          onChange={(e) => handleSetPercent(Number(e.target.value))}
-          className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-emerald-500"
-        />
-        <div className="text-center text-lg font-bold tabular-nums mt-1">
-          {discharge.valvePercent}%
+      {/* Status Badge & Valve Position Display */}
+      <div className="mt-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm">
+            {discharge.open ? (
+              <span className="inline-flex items-center px-2 py-1 rounded bg-green-900/30 border border-green-700 text-green-300 text-xs font-semibold">
+                ● FLOWING
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-2 py-1 rounded bg-gray-700 border border-gray-600 text-gray-400 text-xs">
+                ○ CLOSED
+              </span>
+            )}
+          </span>
+          <span className="text-lg font-mono text-white font-bold">
+            {discharge.valvePercent}%
+          </span>
         </div>
-      </div>
-      
-      {/* Quickset buttons */}
-      <div className="mt-2 flex gap-2 justify-center">
-        {quicksets.map(pct => (
-          <button
-            key={pct}
-            onClick={() => handleSetPercent(pct)}
-            className="px-3 py-1 text-xs rounded bg-white/10 hover:bg-white/20 transition-all"
-          >
-            {pct}%
-          </button>
-        ))}
+        
+        {/* Enhanced Valve Lever Slider */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-300">
+            Valve Position
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value={discharge.valvePercent}
+            onChange={(e) => handleSetPercent(parseInt(e.target.value, 10))}
+            onKeyDown={(e) => {
+              // Arrow keys for fine control
+              if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+                e.preventDefault()
+                handleSetPercent(Math.max(0, discharge.valvePercent - 5))
+              } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+                e.preventDefault()
+                handleSetPercent(Math.min(100, discharge.valvePercent + 5))
+              } else if (e.key === 'Home') {
+                e.preventDefault()
+                handleSetPercent(0)
+              } else if (e.key === 'End') {
+                e.preventDefault()
+                handleSetPercent(100)
+              }
+            }}
+            aria-label={`${discharge.label} valve position`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={discharge.valvePercent}
+            className="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-thumb-custom"
+          />
+          
+          {/* Quick-set buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleSetPercent(0)}
+              className="flex-1 px-2 py-1 text-xs bg-red-900/30 border border-red-700 text-red-300 rounded hover:bg-red-900/50"
+            >
+              CLOSE
+            </button>
+            {[25, 50, 75, 100].map(pct => (
+              <button
+                key={pct}
+                onClick={() => handleSetPercent(pct)}
+                className="px-2 py-1 text-xs bg-gray-700 border border-gray-600 text-gray-300 rounded hover:bg-gray-600"
+              >
+                {pct}%
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        {/* Flow indicator (only shows when open) */}
+        {discharge.open && discharge.gpmNow > 0 && (
+          <div className="text-center py-2 bg-blue-900/30 border border-blue-700 rounded">
+            <div className="text-2xl font-mono text-blue-300 font-bold">
+              {Math.round(discharge.gpmNow)} GPM
+            </div>
+          </div>
+        )}
       </div>
       
       {discharge.foamCapable && (
@@ -771,11 +847,14 @@ export function LevelsCard() {
 
 export function PumpDataCard() {
   const totals = useStore(state => state.totals)
+  const discharges = useStore(state => state.discharges)
   
   return (
     <div className="puc-card">
       <h3 className="text-base sm:text-lg lg:text-xl font-semibold tracking-wide uppercase mb-3 text-center opacity-80 drop-shadow-md">PUMP DATA</h3>
-      <div className="space-y-3">
+      
+      {/* Total Flow Summary */}
+      <div className="space-y-3 mb-4 pb-4 border-b border-white/10">
         <div>
           <div className="text-xs opacity-60 text-center mb-1">TOTAL GPM Now</div>
           <div className="text-2xl font-bold text-center tabular-nums text-emerald-400">
@@ -789,10 +868,114 @@ export function PumpDataCard() {
           </div>
         </div>
       </div>
+      
+      {/* Per-Line FL Metrics */}
+      <div className="space-y-3">
+        {Object.entries(discharges).map(([id, discharge]) => {
+          if (!discharge.open || discharge.gpmNow === 0) return null
+          
+          // Calculate friction loss using the new FL system
+          const flMode = discharge.hoseConfig.flMode
+          const flValue = getEffectiveFLValue(discharge)
+          
+          const flResult: FrictionLossResult = computeLineFrictionLoss({
+            gpm: discharge.gpmNow,
+            lengthFt: discharge.hoseConfig.lengthFt,
+            mode: flMode === 'preset' ? 'psi_per100' : 'coefficient',
+            value: flMode === 'preset' 
+              ? flValue
+              : flValue
+          })
+          
+          // Calculate PDP based on assignment type
+          let nozzlePressure = 0
+          let elevationPsi = 0
+          
+          if (discharge.assignment.type === 'handline_175_fog') {
+            nozzlePressure = 100 // 75 NP + 25 appliance approximation
+          } else if (discharge.assignment.type === 'fdc_standpipe') {
+            nozzlePressure = 100
+            elevationPsi = discharge.assignment.floors * 5
+          } else if (discharge.assignment.type === 'blitzfire') {
+            nozzlePressure = discharge.assignment.mode === 'std100' ? 100 : 55
+          } else if (discharge.assignment.type === 'deck_gun') {
+            nozzlePressure = 80
+          }
+          
+          const pdp = nozzlePressure + flResult.totalPsi + elevationPsi
+          
+          return (
+            <div key={id} className="bg-gray-800 rounded p-3 space-y-1">
+              <div className="font-semibold text-white">{discharge.label}</div>
+              
+              {/* Hose Configuration */}
+              <div className="text-sm text-gray-300">
+                <span className="text-gray-400">Hose:</span> {discharge.hoseConfig.diameter}″ × {discharge.hoseConfig.lengthFt}′
+              </div>
+              
+              {/* Current Flow */}
+              <div className="text-sm">
+                <span className="text-gray-400">Flow:</span>{' '}
+                <span className="text-blue-300 font-mono">{Math.round(discharge.gpmNow)} GPM</span>
+              </div>
+              
+              {/* Friction Loss - HIGHLIGHTED */}
+              <div className="bg-blue-900/30 border border-blue-700 rounded px-2 py-1 space-y-0.5">
+                <div className="text-xs">
+                  <span className="text-blue-300 font-semibold">FL Rate:</span>{' '}
+                  <span className="text-blue-200 font-mono">{flResult.psiPer100.toFixed(1)} psi/100′</span>
+                  {discharge.hoseConfig.flOverride && (
+                    <span className="text-blue-400 text-xs ml-1">●</span>
+                  )}
+                </div>
+                <div className="text-xs">
+                  <span className="text-blue-300 font-semibold">FL Total:</span>{' '}
+                  <span className="text-blue-200 font-mono">{flResult.totalPsi.toFixed(1)} psi</span>
+                </div>
+              </div>
+              
+              {/* Nozzle Pressure */}
+              {nozzlePressure > 0 && (
+                <div className="text-sm">
+                  <span className="text-gray-400">Nozzle:</span>{' '}
+                  <span className="text-green-300 font-mono">{nozzlePressure} psi</span>
+                </div>
+              )}
+              
+              {/* Elevation if applicable */}
+              {elevationPsi > 0 && (
+                <div className="text-sm">
+                  <span className="text-gray-400">Elevation:</span>{' '}
+                  <span className="text-amber-300 font-mono">{elevationPsi.toFixed(1)} psi</span>
+                </div>
+              )}
+              
+              {/* Pump Discharge Pressure (PDP) */}
+              <div className="text-sm font-semibold">
+                <span className="text-gray-400">PDP:</span>{' '}
+                <span className="text-orange-300 font-mono">
+                  {Math.round(pdp)} psi
+                </span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      
+      {/* Info Footer */}
       <div className="mt-4 text-xs text-center opacity-60">
         <p>Pierce PUC</p>
         <p>Manual Mode</p>
       </div>
+      
+      {/* Helper Text */}
+      {Object.values(discharges).some(d => d.open && d.gpmNow > 0) && (
+        <div className="text-xs text-gray-500 mt-3 p-2 bg-gray-900/50 rounded leading-relaxed">
+          <strong>FL Rate:</strong> Friction loss per 100 feet of hose<br />
+          <strong>FL Total:</strong> Total friction loss for the entire line<br />
+          <strong>● indicator:</strong> Custom override applied
+        </div>
+      )}
     </div>
   )
 }

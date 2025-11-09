@@ -39,10 +39,6 @@ export default function PanelDischarges() {
     return computeEvolutionAtValve(evo, activeLine.valvePercent, governorPsi)
   }, [evo, activeLine.valvePercent, governor.mode, governor.setPsi, activeLineId])
   
-  const handleToggleOpen = () => {
-    setLine(activeLineId, { open: !activeLine.open })
-  }
-  
   const handleValveChange = (percent: number) => {
     setLine(activeLineId, { valvePercent: percent })
   }
@@ -87,21 +83,23 @@ export default function PanelDischarges() {
       
       {/* Active Line Card */}
       <div className="flex-1 rounded-xl bg-[#1a2332] border-2 border-[#2a3340] p-4 flex flex-col overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">{activeLine.label}</h3>
-          <button
-            onClick={handleToggleOpen}
-            className={`
-              px-4 py-2 rounded-lg font-bold text-sm transition-all
-              ${activeLine.open
-                ? 'bg-emerald-500/20 text-emerald-300 border-2 border-emerald-500/50'
-                : 'bg-[#0b1220] text-slate-400 border-2 border-[#2a3340]'
-              }
-            `}
-            aria-pressed={activeLine.open}
-          >
-            {activeLine.open ? 'OPEN' : 'CLOSED'}
-          </button>
+        {/* Header with Status Display */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-bold">{activeLine.label}</h3>
+            <div className="text-4xl font-mono text-white font-bold">
+              {activeLine.valvePercent}%
+            </div>
+          </div>
+          <div>
+            {activeLine.open ? (
+              <div className="text-green-400 font-semibold text-lg">
+                ● FLOWING {Math.round(activeLine.gpmNow)} GPM
+              </div>
+            ) : (
+              <div className="text-gray-500 text-sm">○ Closed</div>
+            )}
+          </div>
         </div>
         
         {/* Evolution Picker - Only for 2½" and deck lines */}
@@ -128,38 +126,46 @@ export default function PanelDischarges() {
           </div>
         )}
         
-        {/* Valve Control */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-sm font-semibold">Valve Position</div>
-            <div className="text-lg font-mono text-teal-400">{activeLine.valvePercent}%</div>
+        {/* Large Touch-Friendly Lever */}
+        <div className="mb-4 space-y-3">
+          <div className="flex items-center justify-between text-xs text-gray-400">
+            <span>CLOSED</span>
+            <span>Valve Position</span>
+            <span>OPEN</span>
           </div>
+          
           <input
             type="range"
             min="0"
             max="100"
+            step="5"
             value={activeLine.valvePercent}
             onChange={(e) => handleValveChange(Number(e.target.value))}
-            disabled={!activeLine.open}
-            className="w-full h-3 bg-[#0b1220] rounded-lg appearance-none cursor-pointer disabled:opacity-50"
+            className="w-full h-6 bg-[#0b1220] rounded-lg appearance-none cursor-pointer"
             style={{
-              background: `linear-gradient(to right, #14b8a6 0%, #14b8a6 ${activeLine.valvePercent}%, #0b1220 ${activeLine.valvePercent}%, #0b1220 100%)`
+              background: `linear-gradient(to right, #14b8a6 0%, #14b8a6 ${activeLine.valvePercent}%, #0b1220 ${activeLine.valvePercent}%, #0b1220 100%)`,
+              WebkitAppearance: 'none',
             }}
           />
-          <div className="flex justify-between mt-1 text-[10px] opacity-60">
-            <span>Closed</span>
-            <span>Full Open</span>
-          </div>
         </div>
         
-        {/* Quick Presets */}
-        <div className="grid grid-cols-4 gap-2 mb-4">
+        {/* Quick-set buttons - Larger for mobile */}
+        <div className="grid grid-cols-5 gap-2 mb-4">
+          <button
+            onClick={() => handleValveChange(0)}
+            className="py-3 text-sm bg-red-900/30 border-2 border-red-700 text-red-300 rounded-lg font-semibold active:bg-red-900/60"
+          >
+            OFF
+          </button>
           {[25, 50, 75, 100].map(pct => (
             <button
               key={pct}
               onClick={() => handleValveChange(pct)}
-              disabled={!activeLine.open}
-              className="py-2 rounded-lg bg-[#0b1220] border border-[#2a3340] text-xs font-medium hover:bg-[#17202b] active:bg-[#232b35] disabled:opacity-50"
+              className={`py-3 text-sm border-2 rounded-lg font-semibold active:scale-95 transition ${
+                activeLine.valvePercent === pct
+                  ? 'bg-blue-900/50 border-blue-600 text-blue-300'
+                  : 'bg-gray-700 border-gray-600 text-gray-300'
+              }`}
             >
               {pct}%
             </button>

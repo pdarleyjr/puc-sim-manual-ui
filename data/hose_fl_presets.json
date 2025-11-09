@@ -1,0 +1,59 @@
+{
+  "presets": {
+    "key_combat_ready_175": {
+      "name": "Key Combat Ready 1¾″",
+      "diameter_inches": 1.75,
+      "default_psi_per_100ft": 20.2,
+      "coefficient": 15.5,
+      "reference_gpm": 175,
+      "notes": "Key Hose Combat Ready attack line - industry standard for structural firefighting",
+      "source": "Key Hose product specifications"
+    },
+    "key_big10_25_low": {
+      "name": "Key Big-10 2½″ (Low Flow)",
+      "diameter_inches": 2.5,
+      "default_psi_per_100ft": 2.7,
+      "coefficient": 2.0,
+      "reference_gpm": 175,
+      "notes": "Key Big-10 at lower flow rates - portable monitor/standpipe operations",
+      "source": "Key Hose Big-10 technical data"
+    },
+    "key_big10_25_rated": {
+      "name": "Key Big-10 2½″ (Rated Flow)",
+      "diameter_inches": 2.5,
+      "default_psi_per_100ft": 22.0,
+      "coefficient": 2.0,
+      "reference_gpm": 500,
+      "notes": "Key Big-10 at rated flow - blitz attack/FDC supply operations",
+      "source": "Key Hose Big-10 technical data"
+    },
+    "standard_175": {
+      "name": "Standard 1¾″ Attack Line",
+      "diameter_inches": 1.75,
+      "default_psi_per_100ft": 24.0,
+      "coefficient": 15.5,
+      "reference_gpm": 150,
+      "notes": "Generic 1.75″ single-jacket hose",
+      "source": "IFSTA Pump Operations"
+    },
+    "standard_25": {
+      "name": "Standard 2½″ Handline",
+      "diameter_inches": 2.5,
+      "default_psi_per_100ft": 2.0,
+      "coefficient": 2.0,
+      "reference_gpm": 250,
+      "notes": "Generic 2.5″ double-jacket hose",
+      "source": "IFSTA Pump Operations"
+    }
+  },
+  "formula_reference": {
+    "description": "Friction Loss = C × (Q/100)² × (L/100)",
+    "variables": {
+      "C": "Friction loss coefficient (specific to hose type/diameter)",
+      "Q": "Flow rate in gallons per minute (GPM)",
+      "L": "Hose length in feet"
+    },
+    "source": "Task Force Tips - Hydraulic Calculations Every Firefighter Needs to Know",
+    "url": "https://tft.com/hydraulic-calculations-every-firefighter-needs-to-know/"
+  }
+}
