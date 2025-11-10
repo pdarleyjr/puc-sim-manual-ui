@@ -53,7 +53,7 @@ export default function QuickTogglesSheet() {
   const isKeyboardOpen = useKeyboardOpen()
   
   // Get tiles for the active mode
-  const route = activeMode === 'panel' || activeMode === 'foam' || activeMode === 'scenario' 
+  const route = activeMode === 'panel' || activeMode === 'scenario' 
     ? 'panel' 
     : activeMode === 'hydrant_lab' 
     ? 'hydrant' 

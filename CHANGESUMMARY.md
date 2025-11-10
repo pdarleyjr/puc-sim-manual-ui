@@ -1,6 +1,16 @@
 # Fire Pump Simulator - Sonnet 4.5 Upgrade Summary
 
+## [Unreleased]
+
+### Added
+- **Nozzle Profiles foundation**: Type definitions, hydraulics formulas (Freeman + fog), default presets library, storage layer with precedence resolution, and Zustand state management
+- **Scenario Admin foundation**: Type definitions, validation schemas, IndexedDB storage layer, Zustand state management, and utility functions for NFPA-1410 style training scenarios (feature flag gated: VITE_SCENARIO_ADMIN)
+
+### Removed
+- **Foam System tab**: Removed legacy Foam System mode from launcher. Existing pump engagement options (Water Pump and Water Pump + Foam Manifold) remain unchanged and fully functional.
+
 **Date**: October 27, 2025
+
 **Live URL**: https://pdarleyjr.github.io/puc-sim-manual-ui/
 **Rollback Point**: Tag `safety-pre-upgrade-2025-10-27-1603` / Branch `safety/pre-upgrade-2025-10-27`
 
@@ -26,6 +36,7 @@ All changes are feature-flagged and default to OFF, ensuring zero impact on exis
 VITE_MOBILE_APP_UI=true
 VITE_HYDRANT_LAB_V2=true
 VITE_CALC_ENGINE_V2=true
+VITE_SCENARIO_ADMIN=true
 ```
 
 **Query Parameter Overrides** (for testing):
@@ -33,6 +44,7 @@ VITE_CALC_ENGINE_V2=true
 ?flag:mobile_app_ui=1
 ?flag:hydrant_lab_v2=1
 ?flag:calc_engine_v2=1
+?flag:scenario_admin=1
 ```
 
 **Priority**: Query Parameter > Environment Variable > Default (false)
@@ -44,6 +56,7 @@ VITE_CALC_ENGINE_V2=true
 | `VITE_MOBILE_APP_UI` | false | Mobile UI shell | Activates SA-HUD, bottom nav, quick-toggles |
 | `VITE_HYDRANT_LAB_V2` | false | Enhanced hydrant lab | Loads interactive SVG canvas with port controls |
 | `VITE_CALC_ENGINE_V2` | false | New calculation engine | Uses pure functional hydraulics calculations |
+| `VITE_SCENARIO_ADMIN` | false | Scenario admin UI and storage | Enables creation and management of training scenarios |
 
 ## Deployed Changes
 
@@ -281,7 +294,7 @@ If issues are discovered:
 
 **Timeline:** 2025-11-03  
 **Safety Checkpoint:** Tag `safety-pre-upgrade-2025-11-03-1806` / Branch `safety/pre-upgrade-november-2025`  
-**Documentation Branch:** `docs/november-2025-upgrade-cycle`
+**Documentation Branch:** `docs/november-2025-upgrade-cycle`  
 
 ## Overview
 

@@ -30,10 +30,9 @@ export const selectResidualBadge = (st: AppState): 'green' | 'amber' | 'red' | n
 }
 
 // Tutorial context detection
-export function getEngageContext(): 'panel-only' | 'scenario-prearmed' | 'foam' {
+export function getEngageContext(): 'panel-only' | 'scenario-prearmed' {
   const m = useLauncher.getState().chosenMode
   if (m === 'scenario') return 'scenario-prearmed'
-  if (m === 'foam') return 'foam'
   return 'panel-only'
 }
 

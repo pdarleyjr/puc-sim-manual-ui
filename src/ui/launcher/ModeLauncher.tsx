@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { ChevronRight, Gauge, Radio, Droplets, Droplet } from 'lucide-react'
+import { ChevronRight, Gauge, Radio, Droplet, Settings, Play } from 'lucide-react'
 import { useLauncher, type LauncherMode } from '../../state/launcher'
 import type { ScenarioId } from '../../state/store'
+import { featureFlag } from '../../flags'
 
 interface ModeCardProps {
   mode: LauncherMode
@@ -73,8 +74,9 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
   
   const panelRef = useRef<HTMLInputElement>(null)
   const scenarioRef = useRef<HTMLInputElement>(null)
-  const foamRef = useRef<HTMLInputElement>(null)
   const hydrantLabRef = useRef<HTMLInputElement>(null)
+  const scenarioAdminRef = useRef<HTMLInputElement>(null)
+  const scenarioRunnerRef = useRef<HTMLInputElement>(null)
   
   // Load saved preference on mount
   useEffect(() => {
@@ -86,8 +88,12 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
     const handleKeyDown = (e: KeyboardEvent) => {
       if (step !== 1) return
       
-      const modes: LauncherMode[] = ['panel', 'scenario', 'foam', 'hydrant_lab']
-      const refs = [panelRef, scenarioRef, foamRef, hydrantLabRef]
+      const modes: LauncherMode[] = featureFlag('SCENARIO_ADMIN') 
+        ? ['panel', 'scenario', 'hydrant_lab', 'scenario_admin', 'scenario_runner']
+        : ['panel', 'scenario', 'hydrant_lab']
+      const refs = featureFlag('SCENARIO_ADMIN')
+        ? [panelRef, scenarioRef, hydrantLabRef, scenarioAdminRef, scenarioRunnerRef]
+        : [panelRef, scenarioRef, hydrantLabRef]
       const currentIndex = modes.indexOf(chosenMode)
       
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
@@ -179,16 +185,6 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
               />
               
               <ModeCard
-                mode="foam"
-                icon={<Droplets size={24} />}
-                title="Foam System"
-                description="Operate foam-capable discharges; foam levels and refills."
-                selected={chosenMode === 'foam'}
-                onSelect={() => setMode('foam')}
-                inputRef={foamRef}
-              />
-              
-              <ModeCard
                 mode="hydrant_lab"
                 icon={<Droplet size={24} />}
                 title="Hydrant Connection Lab"
@@ -197,6 +193,30 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
                 onSelect={() => setMode('hydrant_lab')}
                 inputRef={hydrantLabRef}
               />
+              
+              {featureFlag('SCENARIO_ADMIN') && (
+                <>
+                  <ModeCard
+                    mode="scenario_admin"
+                    icon={<Settings size={24} />}
+                    title="Scenario Admin"
+                    description="Build and manage NFPA-1410 training scenarios"
+                    selected={chosenMode === 'scenario_admin'}
+                    onSelect={() => setMode('scenario_admin')}
+                    inputRef={scenarioAdminRef}
+                  />
+                  
+                  <ModeCard
+                    mode="scenario_runner"
+                    icon={<Play size={24} />}
+                    title="Scenario Runner"
+                    description="Execute NFPA-1410 training scenarios"
+                    selected={chosenMode === 'scenario_runner'}
+                    onSelect={() => setMode('scenario_runner')}
+                    inputRef={scenarioRunnerRef}
+                  />
+                </>
+              )}
             </div>
             
             {/* Preference checkbox */}
@@ -212,8 +232,9 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
                   Always start with {
                     chosenMode === 'panel' ? 'Panel Only' : 
                     chosenMode === 'scenario' ? 'Scenario Mode' : 
-                    chosenMode === 'foam' ? 'Foam System' :
                     chosenMode === 'hydrant_lab' ? 'Hydrant Connection Lab' :
+                    chosenMode === 'scenario_admin' ? 'Scenario Admin' :
+                    chosenMode === 'scenario_runner' ? 'Scenario Runner' :
                     'this mode'
                   } on this device
                 </span>

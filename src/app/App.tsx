@@ -3,6 +3,8 @@ import { Panel } from '../ui/Panel'
 import { ModeLauncher } from '../ui/launcher/ModeLauncher'
 import { HydrantLabScreen } from '../features/hydrant-lab/HydrantLabScreen'
 import { HydrantLabScreenV2 } from '../features/hydrant-lab/HydrantLabScreenV2'
+import { ScenarioAdminRoute } from '../features/scenario-admin/ScenarioAdminRoute'
+import { ScenarioRunnerRoute } from '../features/scenario-admin/ScenarioRunnerRoute'
 import { useStore } from '../state/store'
 import type { LauncherMode } from '../state/launcher'
 import type { ScenarioId } from '../state/store'
@@ -60,18 +62,7 @@ function App() {
     setActiveMode(mode)
     
     // Handle mode-specific setup
-    if (mode === 'foam') {
-      // Auto-engage foam when entering foam mode
-      setTimeout(() => {
-        engagePump('foam')
-        // Show overview tour on first visit
-        if (firstVisit) {
-          setTimeout(() => {
-            startOverviewTour()
-          }, 500)
-        }
-      }, 100)
-    } else if (mode === 'scenario' && scenario) {
+    if (mode === 'scenario' && scenario) {
       // Auto-engage water pump and start scenario
       setTimeout(() => {
         engagePump('water')
@@ -82,6 +73,12 @@ function App() {
     } else if (mode === 'hydrant_lab') {
       // Hydrant Connection Lab: independent state management
       // No setup needed - the lab has its own store
+    } else if (mode === 'scenario_admin') {
+      // Scenario Admin: independent state management
+      // No setup needed - uses its own store
+    } else if (mode === 'scenario_runner') {
+      // Scenario Runner: independent state management
+      // No setup needed - uses its own store
     } else if (mode === 'panel') {
       // Panel only - show overview tour on first visit
       if (firstVisit) {
@@ -101,6 +98,16 @@ function App() {
   
   if (useHydrantLabV2) {
     console.log('🚩 HYDRANT_LAB_V2 flag enabled - using HydrantLabScreenV2')
+  }
+  
+  // Render scenario_admin mode if enabled and selected
+  if (activeMode === 'scenario_admin' && featureFlag('SCENARIO_ADMIN')) {
+    return <ScenarioAdminRoute />
+  }
+  
+  // Render scenario_runner mode if enabled and selected
+  if (activeMode === 'scenario_runner' && featureFlag('SCENARIO_ADMIN')) {
+    return <ScenarioRunnerRoute />
   }
   
   // Render mobile shell OR desktop layout based on viewport

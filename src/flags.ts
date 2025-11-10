@@ -1,5 +1,5 @@
 // Feature flag utility with query parameter override support
-type FlagName = 'MOBILE_APP_UI' | 'HYDRANT_LAB_V2' | 'CALC_ENGINE_V2';
+type FlagName = 'MOBILE_APP_UI' | 'HYDRANT_LAB_V2' | 'CALC_ENGINE_V2' | 'SCENARIO_ADMIN';
 
 const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
 const qp = (name: FlagName) => q?.get('flag:' + name.toLowerCase()) ?? null;

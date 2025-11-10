@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { ScenarioId } from './store'
 
-export type LauncherMode = 'panel' | 'scenario' | 'foam' | 'hydrant_lab' | null
+export type LauncherMode = 'panel' | 'scenario' | 'hydrant_lab' | 'scenario_admin' | 'scenario_runner' | null
 
 export interface LauncherState {
   chosenMode: LauncherMode
@@ -28,7 +28,7 @@ export const useLauncher = create<LauncherState>((set) => ({
   loadPreference: () => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored === 'panel' || stored === 'scenario' || stored === 'foam' || stored === 'hydrant_lab') {
+      if (stored === 'panel' || stored === 'scenario' || stored === 'hydrant_lab' || stored === 'scenario_admin' || stored === 'scenario_runner') {
         set({ preferredMode: stored, chosenMode: stored })
       }
     } catch {
