@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { ChevronRight, Gauge, Radio, Droplet, Settings, Play } from 'lucide-react'
+import { ChevronRight, Gauge, Radio, Droplet, Settings, Play, Wrench } from 'lucide-react'
 import { useLauncher, type LauncherMode } from '../../state/launcher'
 import type { ScenarioId } from '../../state/store'
 import { featureFlag } from '../../flags'
@@ -77,6 +77,7 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
   const hydrantLabRef = useRef<HTMLInputElement>(null)
   const scenarioAdminRef = useRef<HTMLInputElement>(null)
   const scenarioRunnerRef = useRef<HTMLInputElement>(null)
+  const nozzleAdminRef = useRef<HTMLInputElement>(null)
   
   // Load saved preference on mount
   useEffect(() => {
@@ -89,10 +90,10 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
       if (step !== 1) return
       
       const modes: LauncherMode[] = featureFlag('SCENARIO_ADMIN') 
-        ? ['panel', 'scenario', 'hydrant_lab', 'scenario_admin', 'scenario_runner']
+        ? ['panel', 'scenario', 'hydrant_lab', 'scenario_admin', 'scenario_runner', 'nozzle_admin']
         : ['panel', 'scenario', 'hydrant_lab']
       const refs = featureFlag('SCENARIO_ADMIN')
-        ? [panelRef, scenarioRef, hydrantLabRef, scenarioAdminRef, scenarioRunnerRef]
+        ? [panelRef, scenarioRef, hydrantLabRef, scenarioAdminRef, scenarioRunnerRef, nozzleAdminRef]
         : [panelRef, scenarioRef, hydrantLabRef]
       const currentIndex = modes.indexOf(chosenMode)
       
@@ -215,6 +216,16 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
                     onSelect={() => setMode('scenario_runner')}
                     inputRef={scenarioRunnerRef}
                   />
+                  
+                  <ModeCard
+                    mode="nozzle_admin"
+                    icon={<Wrench size={24} />}
+                    title="Nozzle Profiles"
+                    description="Manage NFPA-compliant nozzle presets and category defaults"
+                    selected={chosenMode === 'nozzle_admin'}
+                    onSelect={() => setMode('nozzle_admin')}
+                    inputRef={nozzleAdminRef}
+                  />
                 </>
               )}
             </div>
@@ -235,6 +246,7 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
                     chosenMode === 'hydrant_lab' ? 'Hydrant Connection Lab' :
                     chosenMode === 'scenario_admin' ? 'Scenario Admin' :
                     chosenMode === 'scenario_runner' ? 'Scenario Runner' :
+                    chosenMode === 'nozzle_admin' ? 'Nozzle Profiles' :
                     'this mode'
                   } on this device
                 </span>

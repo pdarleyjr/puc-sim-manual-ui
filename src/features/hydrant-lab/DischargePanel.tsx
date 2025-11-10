@@ -1,18 +1,72 @@
+import { useState } from 'react'
 import { useHydrantLab, NOZZLE_LIBRARY, type NozzleType, type DischargeLine } from './store'
+import { NozzlePill } from '../nozzle-profiles/components/NozzlePill'
+import { NozzlePicker } from '../nozzle-profiles/components/NozzlePicker'
+import { useDischargeCalc } from '../nozzle-profiles/hooks/useDischargeCalc'
 
 export function DischargePanel() {
   const s = useHydrantLab()
+  const [showNozzlePicker, setShowNozzlePicker] = useState(false)
+  
+  // Compute reference nozzle-aware discharge for the leader category
+  // Uses a standard configuration: 2.5" hose, 200 ft length
+  const nozzleReference = useDischargeCalc({
+    tabId: 'hydrant_lab',
+    category: 'leader',
+    hoseLengthFt: 200,
+    hoseDiameterIn: 2.5,
+    elevationGainFt: 0,
+    applianceLossPsi: 0
+  })
   
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold opacity-70 uppercase tracking-wide">Discharge Lines</h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-semibold opacity-70 uppercase tracking-wide">Discharge Lines</h3>
+          <NozzlePill
+            tabId="hydrant_lab"
+            category="leader"
+            onClick={() => setShowNozzlePicker(true)}
+          />
+        </div>
         <div className="text-xs opacity-60">
           Flow: <span className="font-bold text-emerald-300">{s.totalDischargeFlowGpm}</span> / 
           <span className="font-bold text-amber-300"> {s.totalDischargeDemandGpm}</span> GPM
         </div>
       </div>
       
+      {/* Nozzle Profile Reference Calculation */}
+      {nozzleReference && (
+        <div className="border border-blue-500/30 bg-blue-500/10 rounded-lg p-3">
+          <div className="text-xs font-semibold text-blue-300 mb-2">
+            📊 Nozzle Profile Reference (2.5" × 200ft)
+          </div>
+          <div className="grid grid-cols-4 gap-2 text-center">
+            <div>
+              <div className="text-[10px] opacity-60">Flow</div>
+              <div className="text-sm font-bold font-mono text-blue-300">{Math.round(nozzleReference.gpm)}</div>
+              <div className="text-[9px] opacity-60">GPM</div>
+            </div>
+            <div>
+              <div className="text-[10px] opacity-60">PDP</div>
+              <div className="text-sm font-bold font-mono text-blue-300">{Math.round(nozzleReference.pdp)}</div>
+              <div className="text-[9px] opacity-60">PSI</div>
+            </div>
+            <div>
+              <div className="text-[10px] opacity-60">NP</div>
+              <div className="text-sm font-bold font-mono text-blue-300">{Math.round(nozzleReference.np)}</div>
+              <div className="text-[9px] opacity-60">PSI</div>
+            </div>
+            <div>
+              <div className="text-[10px] opacity-60">FL</div>
+              <div className="text-sm font-bold font-mono text-blue-300">{Math.round(nozzleReference.fl)}</div>
+              <div className="text-[9px] opacity-60">PSI</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* PDP Control */}
       <div className="border border-white/10 rounded-lg p-3">
         <label className="text-xs opacity-60 mb-2 block">Pump Discharge Pressure (PDP)</label>
@@ -70,6 +124,15 @@ export function DischargePanel() {
           ))
         )}
       </div>
+      
+      {/* Nozzle Picker Modal */}
+      {showNozzlePicker && (
+        <NozzlePicker
+          tabId="hydrant_lab"
+          category="leader"
+          onClose={() => setShowNozzlePicker(false)}
+        />
+      )}
     </div>
   )
 }
@@ -166,7 +229,7 @@ function DischargeLineCard({ line }: { line: DischargeLine }) {
                     : 'bg-white/5'
                 }`}
               >
-                {size}"
+                {size}"`
               </button>
             ))}
           </div>

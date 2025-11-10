@@ -5,6 +5,7 @@ import { HydrantLabScreen } from '../features/hydrant-lab/HydrantLabScreen'
 import { HydrantLabScreenV2 } from '../features/hydrant-lab/HydrantLabScreenV2'
 import { ScenarioAdminRoute } from '../features/scenario-admin/ScenarioAdminRoute'
 import { ScenarioRunnerRoute } from '../features/scenario-admin/ScenarioRunnerRoute'
+import { NozzleAdminRoute } from '../features/nozzle-profiles/NozzleAdminRoute'
 import { useStore } from '../state/store'
 import type { LauncherMode } from '../state/launcher'
 import type { ScenarioId } from '../state/store'
@@ -108,6 +109,11 @@ function App() {
   // Render scenario_runner mode if enabled and selected
   if (activeMode === 'scenario_runner' && featureFlag('SCENARIO_ADMIN')) {
     return <ScenarioRunnerRoute />
+  }
+  
+  // Render nozzle_admin mode if enabled and selected
+  if (activeMode === 'nozzle_admin' && featureFlag('SCENARIO_ADMIN')) {
+    return <NozzleAdminRoute />
   }
   
   // Render mobile shell OR desktop layout based on viewport

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { ScenarioId } from './store'
 
-export type LauncherMode = 'panel' | 'scenario' | 'hydrant_lab' | 'scenario_admin' | 'scenario_runner' | null
+export type LauncherMode = 'panel' | 'scenario' | 'hydrant_lab' | 'scenario_admin' | 'scenario_runner' | 'nozzle_admin' | null
 
 export interface LauncherState {
   chosenMode: LauncherMode

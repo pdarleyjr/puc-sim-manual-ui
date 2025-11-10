@@ -22,7 +22,7 @@ export interface EvoSpec {
   kind: EvoKind;
   label?: string;                  // optional display name
   hoseLengthFt?: number;           // e.g., 200
-  nozzleProfileId?: string;        // link to nozzle preset (Branch C)
+  nozzleProfileId?: string;        // Optional link to nozzle preset from nozzle profiles system
   targetGpm?: number;              // optional hint
   timeLimitSec: number;            // required per evolution
   options?: {

@@ -3,6 +3,19 @@ import { useStore } from '../../../state/store'
 import type { DischargeId } from '../../../state/store'
 import { TWO_FIVE_EVOS } from '../../../state/evolutions'
 import { getEvo, computeEvolutionAtValve } from '../../../state/evoMath'
+import { NozzlePill } from '../../../features/nozzle-profiles/components/NozzlePill'
+import { NozzlePicker } from '../../../features/nozzle-profiles/components/NozzlePicker'
+import type { NozzleCategory } from '../../../features/nozzle-profiles/types'
+import { useDischargeCalc } from '../../../features/nozzle-profiles/hooks/useDischargeCalc'
+
+// Map discharge IDs to nozzle categories
+function getDischargeCategory(dischargeId: DischargeId): NozzleCategory {
+  if (dischargeId.startsWith('xlay')) return 'crosslay';
+  if (dischargeId === 'trashline') return 'trash';
+  if (dischargeId.startsWith('twohalf')) return 'leader'; // 2½" typically for leader lines
+  if (dischargeId === 'deckgun') return 'other';
+  return 'other';
+}
 
 export default function PanelDischarges() {
   const discharges = useStore(state => state.discharges)
@@ -23,6 +36,7 @@ export default function PanelDischarges() {
   ]
   
   const [activeLineId, setActiveLineId] = useState<DischargeId>('xlay1')
+  const [showNozzlePicker, setShowNozzlePicker] = useState(false)
   const activeLine = discharges[activeLineId]
   
   // Get evolution for current line
@@ -38,6 +52,26 @@ export default function PanelDischarges() {
     const governorPsi = governor.mode === 'pressure' ? governor.setPsi : 150
     return computeEvolutionAtValve(evo, activeLine.valvePercent, governorPsi)
   }, [evo, activeLine.valvePercent, governor.mode, governor.setPsi, activeLineId])
+  
+  // Compute nozzle-aware discharge calculations
+  // Maps discharge IDs to hose configurations for nozzle calculations
+  const nozzleCalc = useDischargeCalc({
+    tabId: 'panel',
+    category: getDischargeCategory(activeLineId),
+    hoseLengthFt: activeLineId.startsWith('twohalf') ? (evo?.hose.lengthFt ?? 200) : 
+                  activeLineId === 'trashline' ? 100 :
+                  activeLineId === 'deckgun' ? 50 : 200,
+    hoseDiameterIn: activeLineId.startsWith('twohalf') ? (evo?.hose.dia ?? 2.5) :
+                    activeLineId === 'trashline' ? 1.5 :
+                    activeLineId === 'deckgun' ? 5 : 1.75,
+    elevationGainFt: 0,
+    applianceLossPsi: 0
+  })
+  
+  // Determine display values with precedence: nozzle calc → evolution stats → line state
+  const displayGpm = nozzleCalc?.gpm ?? evoStats?.flow ?? activeLine.gpmNow
+  const displayPdp = nozzleCalc?.pdp ?? evoStats?.actualPdp ?? activeLine.displayPsi
+  const displayNp = nozzleCalc?.np ?? evoStats?.np ?? 0
   
   const handleValveChange = (percent: number) => {
     setLine(activeLineId, { valvePercent: percent })
@@ -86,7 +120,14 @@ export default function PanelDischarges() {
         {/* Header with Status Display */}
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-bold">{activeLine.label}</h3>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold mb-1">{activeLine.label}</h3>
+              <NozzlePill
+                tabId="panel"
+                category={getDischargeCategory(activeLineId)}
+                onClick={() => setShowNozzlePicker(true)}
+              />
+            </div>
             <div className="text-4xl font-mono text-white font-bold">
               {activeLine.valvePercent}%
             </div>
@@ -177,7 +218,7 @@ export default function PanelDischarges() {
           <div>
             <div className="text-[10px] opacity-60 mb-1">Pressure (PDP)</div>
             <div className="text-xl font-bold font-mono">
-              {Math.round(evoStats?.actualPdp ?? activeLine.displayPsi)}
+              {Math.round(displayPdp)}
               <span className="text-xs ml-1 opacity-70">PSI</span>
             </div>
             {evoStats && evoStats.requiredPdp > evoStats.actualPdp && (
@@ -189,7 +230,7 @@ export default function PanelDischarges() {
           <div>
             <div className="text-[10px] opacity-60 mb-1">Flow</div>
             <div className="text-xl font-bold font-mono">
-              {Math.round(evoStats?.flow ?? activeLine.gpmNow)}
+              {Math.round(displayGpm)}
               <span className="text-xs ml-1 opacity-70">GPM</span>
             </div>
           </div>
@@ -205,7 +246,7 @@ export default function PanelDischarges() {
               </div>
               <div>
                 <div className="opacity-60">Nozzle NP</div>
-                <div className="font-mono">{Math.round(evoStats.np)} psi</div>
+                <div className="font-mono">{Math.round(displayNp)} psi</div>
               </div>
               <div>
                 <div className="opacity-60">Appliance</div>
@@ -217,7 +258,36 @@ export default function PanelDischarges() {
             </div>
           </div>
         )}
+        
+        {/* Nozzle Calculation Details - Show when nozzle calc is active */}
+        {nozzleCalc && !evoStats && (
+          <div className="mt-3 p-3 bg-[#0b1220]/50 rounded-lg text-xs">
+            <div className="grid grid-cols-3 gap-2 opacity-80">
+              <div>
+                <div className="opacity-60">Friction</div>
+                <div className="font-mono">{Math.round(nozzleCalc.fl)} psi</div>
+              </div>
+              <div>
+                <div className="opacity-60">Nozzle NP</div>
+                <div className="font-mono">{Math.round(nozzleCalc.np)} psi</div>
+              </div>
+              <div>
+                <div className="opacity-60">Elevation</div>
+                <div className="font-mono">{Math.round(nozzleCalc.elevation)} psi</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+      
+      {/* Nozzle Picker Modal */}
+      {showNozzlePicker && (
+        <NozzlePicker
+          tabId="panel"
+          category={getDischargeCategory(activeLineId)}
+          onClose={() => setShowNozzlePicker(false)}
+        />
+      )}
     </div>
   )
 }

@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
 import { Play, Pause, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useScenarioAdmin } from '../store';
+import { useNozzleProfiles } from '../../nozzle-profiles/store';
 import { useStore } from '../../../state/store';
 import { formatTime, getEvoKindLabel } from '../utils';
+import { useDischargeCalc } from '../../nozzle-profiles/hooks/useDischargeCalc';
 
 export function RunnerActive() {
   const {
@@ -20,9 +22,25 @@ export function RunnerActive() {
   } = useScenarioAdmin();
 
   const { pumpEngaged, gauges } = useStore();
+  const presets = useNozzleProfiles((s) => s.presets);
 
   const scenario = scenarios.find(s => s.id === runningScenarioId);
   const currentEvo = scenario?.evolutions[currentEvoIndex];
+  
+  // Resolve nozzle preset if specified
+  const nozzlePreset = currentEvo?.nozzleProfileId 
+    ? presets.find(p => p.id === currentEvo.nozzleProfileId)
+    : null;
+  
+  // Compute nozzle-aware discharge calculations if preset available
+  const nozzleCalc = useDischargeCalc({
+    tabId: 'scenarios_runner',
+    category: 'crosslay', // Default category, could be mapped from evo.kind
+    hoseLengthFt: currentEvo?.hoseLengthFt ?? 200,
+    hoseDiameterIn: 1.75,
+    elevationGainFt: 0,
+    applianceLossPsi: 0
+  });
 
   useEffect(() => {
     if (!timerRunning) return;
@@ -74,6 +92,17 @@ export function RunnerActive() {
             </h2>
             {currentEvo.label && (
               <p className="text-gray-400 mb-4">{currentEvo.label}</p>
+            )}
+            {nozzlePreset && (
+              <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600/20 border border-blue-500/30 rounded-md">
+                <span className="text-sm text-blue-300 font-semibold">Nozzle:</span>
+                <span className="text-sm text-white">{nozzlePreset.name}</span>
+              </div>
+            )}
+            {nozzleCalc && (
+              <div className="mt-3 text-xs text-gray-400">
+                <span>Target: {Math.round(nozzleCalc.gpm)} GPM @ {Math.round(nozzleCalc.np)} psi NP</span>
+              </div>
             )}
           </div>
 

@@ -9,10 +9,16 @@
  * - NFPA 1901: Pump Performance
  * - IFSTA: Pump Operations
  * - Freeman Formula for smooth bore nozzles
+ * - Utah Valley University: Friction Loss and Nozzle Flow
+ *   https://www.uvu.edu/ufra/docs/.../friction_loss_and_nozzle_flow.pdf
+ * - Engine Company Operations (PDF)
+ *   https://wordpressstorageaccount.blob.core.windows.net/.../EngineCompanyOperationssection-5-Final-1.pdf
  */
 
 import frictionCoeffs from '../../data/friction_coeffs.json';
 import appliances from '../../data/appliances.json';
+import type { NozzlePreset } from '../features/nozzle-profiles/types';
+import { calcNozzleFlow as calcPresetFlow } from '../features/nozzle-profiles/formulas';
 
 // Types
 export interface HoseConfig {
@@ -339,4 +345,122 @@ export function convertCoefficientToPsiPer100(
 ): number {
   const Q100 = referenceGpm / 100
   return coefficient * Q100 * Q100
+}
+
+/**
+ * Nozzle-aware discharge calculation result
+ */
+export interface NozzleDischargeResult {
+  gpm: number;       // Flow in GPM
+  pdp: number;       // Required pump discharge pressure in PSI
+  np: number;        // Nozzle pressure in PSI
+  fl: number;        // Friction loss in PSI
+  elevation: number; // Elevation pressure in PSI
+  appliance: number; // Appliance loss in PSI
+}
+
+/**
+ * Compute discharge with nozzle preset awareness
+ * 
+ * Integrates with the nozzle profiles system to provide NFPA-compliant
+ * hydraulic calculations using Admin-selected or locally-overridden presets.
+ * 
+ * NFPA-compliant formulas:
+ * - Smooth bore: Q = 29.7 × d² × √NP (Freeman formula)
+ *   Source: https://wordpressstorageaccount.blob.core.windows.net/.../EngineCompanyOperationssection-5-Final-1.pdf
+ * 
+ * - Fog nozzles: Rated GPM @ rated NP (manufacturer specs)
+ *   Typical NP: 100 psi (standard fog), 50 psi (low-pressure fog)
+ *   Source: https://www.uvu.edu/ufra/docs/.../friction_loss_and_nozzle_flow.pdf
+ * 
+ * - Friction loss: FL = C × (Q/100)² × (L/100)
+ *   Q = flow (GPM), L = length (feet), C = friction coefficient
+ * 
+ * - PDP calculation: PDP = NP + FL + Elevation + Appliances
+ *   Elevation pressure: 0.434 PSI per foot of elevation gain
+ * 
+ * @param preset - Nozzle preset from the nozzle profiles system (or null for fallback)
+ * @param hoseLengthFt - Hose length in feet
+ * @param hoseDiameterIn - Hose diameter in inches
+ * @param elevationGainFt - Elevation gain in feet (positive = uphill)
+ * @param applianceLossPsi - Total appliance loss in PSI
+ * @returns Discharge calculation result with GPM, PDP, and breakdown
+ */
+export function computeDischargeWithNozzle(
+  preset: NozzlePreset | null,
+  hoseLengthFt: number,
+  hoseDiameterIn: number,
+  elevationGainFt: number = 0,
+  applianceLossPsi: number = 0
+): NozzleDischargeResult {
+  // Fallback if no preset available
+  if (!preset) {
+    return {
+      gpm: 0,
+      pdp: 0,
+      np: 0,
+      fl: 0,
+      elevation: 0,
+      appliance: 0
+    };
+  }
+
+  // Determine nozzle pressure based on preset kind
+  // Smooth bore: typically 50 psi (handline) or 80 psi (master stream)
+  // Fog: typically 100 psi (standard) or 50 psi (low-pressure)
+  const np = preset.kind === 'smooth_bore' 
+    ? (preset.ratedNPpsi ?? 50)
+    : (preset.ratedNPpsiFog ?? 100);
+
+  // Calculate flow using nozzle preset
+  const gpm = calcPresetFlow(preset, np);
+
+  // Calculate friction loss: FL = C × (Q/100)² × (L/100)
+  const frictionCoeff = getFrictionCoefficient(hoseDiameterIn);
+  const q = gpm / 100;
+  const fl = frictionCoeff * q * q * (hoseLengthFt / 100);
+
+  // Calculate elevation pressure: 0.434 PSI per foot
+  // Reference: 1 foot of water column = 0.434 PSI
+  const elevationPsi = elevationGainFt * 0.434;
+
+  // Calculate total PDP: PDP = NP + FL + Elevation + Appliances
+  const pdp = np + fl + elevationPsi + applianceLossPsi;
+
+  return {
+    gpm,
+    pdp,
+    np,
+    fl,
+    elevation: elevationPsi,
+    appliance: applianceLossPsi
+  };
+}
+
+/**
+ * Get recommended nozzle pressure for NFPA 1410 compliance
+ * 
+ * Training note: These are target pressures for evolutions.
+ * Actual system residual pressure should maintain ≥20 PSI at the hydrant
+ * or water source per NFPA 1142 (rural water supply).
+ * 
+ * @param nozzleKind - Type of nozzle
+ * @param isMasterStream - Whether this is a master stream application
+ * @returns Recommended nozzle pressure in PSI
+ */
+export function getRecommendedNP(
+  nozzleKind: NozzlePreset['kind'],
+  isMasterStream: boolean = false
+): number {
+  switch (nozzleKind) {
+    case 'smooth_bore':
+      // NFPA typical: 50 psi handline, 80 psi master stream
+      return isMasterStream ? 80 : 50;
+    case 'fog_fixed':
+    case 'fog_automatic':
+    case 'fog_selectable':
+      // Standard fog: 100 psi, Low-pressure fog: 50 psi
+      // Default to 100 psi for standard applications
+      return 100;
+  }
 }
