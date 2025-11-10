@@ -10,7 +10,7 @@ export function RunnerSetup() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-6">
       <button
-        onClick={() => setMode('scenario_admin')}
+        onClick={() => setMode('scenarios')}
         className="absolute top-6 left-6 flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
       >
         <ChevronLeft className="w-4 h-4" />
@@ -25,7 +25,7 @@ export function RunnerSetup() {
           <div className="bg-gray-800 rounded-lg p-8 text-center">
             <p className="text-gray-400 mb-4">No scenarios available</p>
             <button
-              onClick={() => setMode('scenario_admin')}
+              onClick={() => setMode('scenarios')}
               className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
               Create Your First Scenario

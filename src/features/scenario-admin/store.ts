@@ -87,6 +87,12 @@ export const useScenarioAdmin = create<ScenarioAdminState>((set, get) => ({
   updateScenario: async (id, updates) => {
     const scenario = get().scenarios.find(s => s.id === id);
     if (!scenario) return;
+    
+    // Prevent editing locked scenarios
+    if (scenario.locked) {
+      set({ error: 'Cannot edit built-in scenarios. Duplicate to customize.' });
+      return;
+    }
 
     const updated = {
       ...scenario,
@@ -105,6 +111,14 @@ export const useScenarioAdmin = create<ScenarioAdminState>((set, get) => ({
   },
 
   deleteScenario: async (id) => {
+    const scenario = get().scenarios.find(s => s.id === id);
+    
+    // Prevent deleting locked scenarios
+    if (scenario?.locked) {
+      set({ error: 'Cannot delete built-in scenarios' });
+      return;
+    }
+    
     try {
       await storage.deleteScenario(id);
       set(state => ({
@@ -139,6 +153,12 @@ export const useScenarioAdmin = create<ScenarioAdminState>((set, get) => ({
   addEvolution: async (scenarioId, evolution) => {
     const scenario = get().scenarios.find(s => s.id === scenarioId);
     if (!scenario) return;
+    
+    // Prevent editing locked scenarios
+    if (scenario.locked) {
+      set({ error: 'Cannot edit built-in scenarios. Duplicate to customize.' });
+      return;
+    }
 
     const updated = {
       ...scenario,
@@ -159,6 +179,12 @@ export const useScenarioAdmin = create<ScenarioAdminState>((set, get) => ({
   updateEvolution: async (scenarioId, evoId, updates) => {
     const scenario = get().scenarios.find(s => s.id === scenarioId);
     if (!scenario) return;
+    
+    // Prevent editing locked scenarios
+    if (scenario.locked) {
+      set({ error: 'Cannot edit built-in scenarios. Duplicate to customize.' });
+      return;
+    }
 
     const updated = {
       ...scenario,
@@ -181,6 +207,12 @@ export const useScenarioAdmin = create<ScenarioAdminState>((set, get) => ({
   deleteEvolution: async (scenarioId, evoId) => {
     const scenario = get().scenarios.find(s => s.id === scenarioId);
     if (!scenario) return;
+    
+    // Prevent editing locked scenarios
+    if (scenario.locked) {
+      set({ error: 'Cannot edit built-in scenarios. Duplicate to customize.' });
+      return;
+    }
 
     if (scenario.evolutions.length === 1) {
       set({ error: 'Cannot delete the last evolution' });

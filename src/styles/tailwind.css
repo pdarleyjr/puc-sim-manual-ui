@@ -42,6 +42,13 @@
   }
 }
 
+@layer utilities {
+  .touch-target-min {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
 /* Redline pulse animation */
 @keyframes pulseRedline {
   0% {

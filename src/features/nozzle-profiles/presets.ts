@@ -26,6 +26,16 @@ export const DEFAULT_NOZZLE_PRESETS: Omit<NozzlePreset, 'id' | 'createdAt' | 'up
     isDefault: false
   },
   {
+    name: '2½″ SB 1⅛″ @ 50 psi',
+    category: 'leader',
+    kind: 'smooth_bore',
+    tipDiameterIn: 1.125,
+    ratedNPpsi: 50,
+    ratedGPM: 265,
+    notes: 'Medium smooth bore for leader lines',
+    isDefault: false
+  },
+  {
     name: '2½″ SB 1¼″ @ 50 psi',
     category: 'trash',
     kind: 'smooth_bore',

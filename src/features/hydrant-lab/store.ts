@@ -1,7 +1,8 @@
 import { create } from 'zustand'
-import { solveHydrantSystem } from './math'
+import { solveHydrantSystem, calculateFlexibleDischargePDP } from './math'
 import { featureFlag } from '../../flags'
 import { solveHydrantSystemV2, computeDischargesV2 } from '../../engine/calcEngineV2Adapter'
+import type { FlexibleDischargeLine, FlexibleDischargeConfig } from './types'
 
 export type PortId = 'sideA' | 'steamer' | 'sideB'
 
@@ -160,6 +161,10 @@ type LabState = {
   pumpCavitating: boolean
   governorLimited: boolean
   
+  // NEW: Flexible discharge system (Phase 5)
+  flexibleDischarges: FlexibleDischargeLine[]
+  useFlexibleMode: boolean  // Toggle between legacy and flexible mode
+  
   // NEW: Discharge bench for testing evolutions
   dischargeBench: {
     enabled: boolean
@@ -185,6 +190,15 @@ type LabState = {
   removeDischargeLine: (id: string) => void
   updateDischargeLine: (id: string, mut: (line: DischargeLine) => void) => void
   toggleDischargeGate: (id: string) => void
+  
+  // NEW: Flexible discharge methods
+  setFlexibleMode: (enabled: boolean) => void
+  addFlexibleDischarge: (config: FlexibleDischargeConfig) => void
+  removeFlexibleDischarge: (id: string) => void
+  updateFlexibleDischargeHose: (id: string, hose: Partial<FlexibleDischargeLine['hose']>) => void
+  updateFlexibleDischargeNozzle: (id: string, nozzle: FlexibleDischargeLine['nozzle']) => void
+  updateFlexibleDischargeAppliances: (id: string, appliances: FlexibleDischargeLine['appliances']) => void
+  toggleFlexibleDischargeGate: (id: string) => void
   
   // NEW: Discharge bench methods
   setDischargeBench: (partial: Partial<LabState['dischargeBench']>) => void
@@ -212,6 +226,10 @@ export const useHydrantLab = create<LabState>((set, get) => ({
   totalDischargeFlowGpm: 0,
   pumpCavitating: false,
   governorLimited: false,
+  
+  // NEW: Flexible discharge system initial state
+  flexibleDischarges: [],
+  useFlexibleMode: true,  // Default to flexible mode for new features
   
   // NEW: Discharge bench initial state
   dischargeBench: {
@@ -359,6 +377,84 @@ export const useHydrantLab = create<LabState>((set, get) => ({
     get().recompute()
   },
   
+  // NEW: Flexible discharge methods
+  setFlexibleMode: (enabled) => {
+    set({ useFlexibleMode: enabled })
+    get().recompute()
+  },
+  
+  addFlexibleDischarge: (config) => {
+    const newLine: FlexibleDischargeLine = {
+      id: `flex-discharge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      hose: {
+        diameter: config.hoseDiameter,
+        lengthFt: config.hoseLengthFt,
+        frictionCoeff: config.nozzleSpecs?.ratedGPM ? undefined : undefined
+      },
+      nozzle: config.nozzleKind ? {
+        kind: config.nozzleKind,
+        tipDiameterIn: config.nozzleSpecs?.tipDiameterIn,
+        ratedGPM: config.nozzleSpecs?.ratedGPM,
+        ratedNPpsi: config.nozzleSpecs?.ratedNPpsi ?? 100
+      } : null,
+      appliances: config.appliances,
+      isOpen: true,
+      flowGPM: 0,
+      frictionLossPsi: 0,
+      nozzlePressurePsi: 0,
+      requiredGPM: 0,
+      warnings: []
+    }
+    
+    set(s => ({
+      flexibleDischarges: [...s.flexibleDischarges, newLine]
+    }))
+    get().recompute()
+  },
+  
+  removeFlexibleDischarge: (id) => {
+    set(s => ({
+      flexibleDischarges: s.flexibleDischarges.filter(line => line.id !== id)
+    }))
+    get().recompute()
+  },
+  
+  updateFlexibleDischargeHose: (id, hose) => {
+    set(s => ({
+      flexibleDischarges: s.flexibleDischarges.map(line => 
+        line.id === id ? { ...line, hose: { ...line.hose, ...hose } } : line
+      )
+    }))
+    get().recompute()
+  },
+  
+  updateFlexibleDischargeNozzle: (id, nozzle) => {
+    set(s => ({
+      flexibleDischarges: s.flexibleDischarges.map(line =>
+        line.id === id ? { ...line, nozzle } : line
+      )
+    }))
+    get().recompute()
+  },
+  
+  updateFlexibleDischargeAppliances: (id, appliances) => {
+    set(s => ({
+      flexibleDischarges: s.flexibleDischarges.map(line =>
+        line.id === id ? { ...line, appliances } : line
+      )
+    }))
+    get().recompute()
+  },
+  
+  toggleFlexibleDischargeGate: (id) => {
+    set(s => ({
+      flexibleDischarges: s.flexibleDischarges.map(line =>
+        line.id === id ? { ...line, isOpen: !line.isOpen } : line
+      )
+    }))
+    get().recompute()
+  },
+  
   // NEW: Discharge bench method
   setDischargeBench: (partial) => {
     set(s => ({
@@ -371,9 +467,6 @@ export const useHydrantLab = create<LabState>((set, get) => ({
     const s = get()
     
     // Feature flag: VITE_CALC_ENGINE_V2
-    // When enabled, uses calcEngineV2 (pure functional hydraulics engine)
-    // When disabled, uses legacy math.ts solver (iterative convergence)
-    // Override via query param: ?flag:calc_engine_v2=1
     const useV2Engine = featureFlag('CALC_ENGINE_V2', false)
     
     let engineIntakePsi: number
@@ -381,53 +474,96 @@ export const useHydrantLab = create<LabState>((set, get) => ({
     let hydrantResidualPsi: number
     
     if (useV2Engine) {
-      // Use calcEngineV2 adapter for supply side calculations
       const supplyResult = solveHydrantSystemV2(s)
       engineIntakePsi = supplyResult.engineIntakePsi
       totalInflowGpm = supplyResult.totalInflowGpm
       hydrantResidualPsi = supplyResult.hydrantResidualPsi
     } else {
-      // Use legacy math.ts solver (default, backward compatible)
       const supplyResult = solveHydrantSystem(s)
       engineIntakePsi = supplyResult.engineIntakePsi
       totalInflowGpm = supplyResult.totalInflowGpm
       hydrantResidualPsi = supplyResult.hydrantResidualPsi
     }
     
-    // Compute discharge side (pump to nozzles)
-    // Both engines use the same discharge computation for now
-    const { 
-      totalDemand, 
-      totalFlow, 
-      cavitating, 
-      governorLimited,
-      updatedLines 
-    } = useV2Engine
-      ? computeDischargesV2(
-          s.dischargeLines,
-          s.pumpDischargePressurePsi,
-          totalInflowGpm,
-          engineIntakePsi,
-          s.governorPsi
+    // Compute discharges based on mode
+    if (s.useFlexibleMode && s.flexibleDischarges.length > 0) {
+      // NEW: Compute flexible discharge lines
+      const updatedFlexibleLines = s.flexibleDischarges.map(line => {
+        if (!line.isOpen) {
+          return { ...line, flowGPM: 0, frictionLossPsi: 0, nozzlePressurePsi: 0, requiredGPM: 0, warnings: [] }
+        }
+        
+        const result = calculateFlexibleDischargePDP(
+          line.hose.diameter,
+          line.hose.lengthFt,
+          line.nozzle,
+          line.appliances,
+          s.pumpDischargePressurePsi
         )
-      : computeDischarges(
-          s.dischargeLines,
-          s.pumpDischargePressurePsi,
-          totalInflowGpm,
-          engineIntakePsi,
-          s.governorPsi
-        )
-    
-    set({ 
-      engineIntakePsi, 
-      totalInflowGpm, 
-      hydrantResidualPsi,
-      totalDischargeDemandGpm: totalDemand,
-      totalDischargeFlowGpm: totalFlow,
-      pumpCavitating: cavitating,
-      governorLimited,
-      dischargeLines: updatedLines
-    })
+        
+        return {
+          ...line,
+          flowGPM: result.flowGPM,
+          frictionLossPsi: result.frictionLossPsi,
+          nozzlePressurePsi: result.nozzlePressurePsi,
+          requiredGPM: result.requiredGPM,
+          warnings: result.warnings
+        }
+      })
+      
+      const totalDemand = updatedFlexibleLines.reduce((sum, line) => sum + line.requiredGPM, 0)
+      const totalFlow = updatedFlexibleLines.reduce((sum, line) => sum + line.flowGPM, 0)
+      
+      // Check pump limits
+      const minIntakeForPDP = s.pumpDischargePressurePsi > 200 ? 15 : s.pumpDischargePressurePsi > 150 ? 10 : 5
+      const cavitating = engineIntakePsi < minIntakeForPDP
+      const governorLimited = totalDemand > totalInflowGpm
+      
+      set({
+        engineIntakePsi,
+        totalInflowGpm,
+        hydrantResidualPsi,
+        totalDischargeDemandGpm: Math.round(totalDemand),
+        totalDischargeFlowGpm: Math.round(totalFlow),
+        pumpCavitating: cavitating,
+        governorLimited,
+        flexibleDischarges: updatedFlexibleLines
+      })
+    } else {
+      // Legacy: Compute standard discharge lines
+      const { 
+        totalDemand, 
+        totalFlow, 
+        cavitating, 
+        governorLimited,
+        updatedLines 
+      } = useV2Engine
+        ? computeDischargesV2(
+            s.dischargeLines,
+            s.pumpDischargePressurePsi,
+            totalInflowGpm,
+            engineIntakePsi,
+            s.governorPsi
+          )
+        : computeDischarges(
+            s.dischargeLines,
+            s.pumpDischargePressurePsi,
+            totalInflowGpm,
+            engineIntakePsi,
+            s.governorPsi
+          )
+      
+      set({ 
+        engineIntakePsi, 
+        totalInflowGpm, 
+        hydrantResidualPsi,
+        totalDischargeDemandGpm: totalDemand,
+        totalDischargeFlowGpm: totalFlow,
+        pumpCavitating: cavitating,
+        governorLimited,
+        dischargeLines: updatedLines
+      })
+    }
   }
 }))
 

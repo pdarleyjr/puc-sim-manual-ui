@@ -3,15 +3,17 @@ import { Panel } from '../ui/Panel'
 import { ModeLauncher } from '../ui/launcher/ModeLauncher'
 import { HydrantLabScreen } from '../features/hydrant-lab/HydrantLabScreen'
 import { HydrantLabScreenV2 } from '../features/hydrant-lab/HydrantLabScreenV2'
-import { ScenarioAdminRoute } from '../features/scenario-admin/ScenarioAdminRoute'
-import { ScenarioRunnerRoute } from '../features/scenario-admin/ScenarioRunnerRoute'
-import { NozzleAdminRoute } from '../features/nozzle-profiles/NozzleAdminRoute'
+import { ScenariosRoute } from '../features/scenario-admin/ScenariosRoute'
+import { SettingsRoute } from '../features/settings/SettingsRoute'
 import { useStore } from '../state/store'
 import type { LauncherMode } from '../state/launcher'
+import { MODE_ALIASES } from '../state/launcher'
 import type { ScenarioId } from '../state/store'
 import { startOverviewTour } from '../ui/tutorial/Tour'
 import MobileShell from '../mobile/MobileShell'
 import { featureFlag } from '../flags'
+import { migrateStorage } from '../features/equipment-config/storage'
+import { useEquipmentConfig } from '../features/equipment-config/store'
 
 /**
  * Main App Component
@@ -58,12 +60,32 @@ function App() {
     }
   }, [])
   
+  // Initialize app: run storage migration and load equipment defaults
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        // Run storage migration first
+        await migrateStorage()
+        
+        // Initialize equipment defaults store
+        await useEquipmentConfig.getState().initialize()
+      } catch (error) {
+        console.error('Failed to initialize app:', error)
+      }
+    }
+    
+    initializeApp()
+  }, [])
+  
   const handleEnterPanel = (mode: LauncherMode, scenario?: ScenarioId) => {
     setShowLauncher(false)
-    setActiveMode(mode)
+    
+    // Apply mode aliases for backward compatibility
+    const effectiveMode = MODE_ALIASES[mode as string] || mode
+    setActiveMode(effectiveMode)
     
     // Handle mode-specific setup
-    if (mode === 'scenario' && scenario) {
+    if (effectiveMode === 'scenario' && scenario) {
       // Auto-engage water pump and start scenario
       setTimeout(() => {
         engagePump('water')
@@ -71,16 +93,16 @@ function App() {
           scenarioStart(scenario)
         }, 100)
       }, 100)
-    } else if (mode === 'hydrant_lab') {
+    } else if (effectiveMode === 'hydrant_lab') {
       // Hydrant Connection Lab: independent state management
       // No setup needed - the lab has its own store
-    } else if (mode === 'scenario_admin') {
-      // Scenario Admin: independent state management
+    } else if (effectiveMode === 'scenarios') {
+      // Unified Scenarios: independent state management
       // No setup needed - uses its own store
-    } else if (mode === 'scenario_runner') {
-      // Scenario Runner: independent state management
+    } else if (effectiveMode === 'settings') {
+      // Settings: independent state management
       // No setup needed - uses its own store
-    } else if (mode === 'panel') {
+    } else if (effectiveMode === 'panel') {
       // Panel only - show overview tour on first visit
       if (firstVisit) {
         setTimeout(() => {
@@ -101,19 +123,14 @@ function App() {
     console.log('🚩 HYDRANT_LAB_V2 flag enabled - using HydrantLabScreenV2')
   }
   
-  // Render scenario_admin mode if enabled and selected
-  if (activeMode === 'scenario_admin' && featureFlag('SCENARIO_ADMIN')) {
-    return <ScenarioAdminRoute />
+  // Render unified scenarios mode if enabled and selected
+  if (activeMode === 'scenarios' && featureFlag('SCENARIOS_UNIFIED')) {
+    return <ScenariosRoute />
   }
   
-  // Render scenario_runner mode if enabled and selected
-  if (activeMode === 'scenario_runner' && featureFlag('SCENARIO_ADMIN')) {
-    return <ScenarioRunnerRoute />
-  }
-  
-  // Render nozzle_admin mode if enabled and selected
-  if (activeMode === 'nozzle_admin' && featureFlag('SCENARIO_ADMIN')) {
-    return <NozzleAdminRoute />
+  // Render settings mode if enabled and selected
+  if (activeMode === 'settings' && featureFlag('SCENARIO_ADMIN')) {
+    return <SettingsRoute />
   }
   
   // Render mobile shell OR desktop layout based on viewport

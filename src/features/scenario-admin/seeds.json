@@ -1,0 +1,100 @@
+[
+  {
+    "id": "seed-initial-attack-crosslay",
+    "name": "Initial Attack - Crosslay Deployment",
+    "unitDesignation": "Engine 1",
+    "incidentType": "structure",
+    "evolutions": [
+      {
+        "id": "evo-initial-attack-1",
+        "kind": "deploy_crosslay",
+        "label": "Deploy 1¾\" crosslay for initial attack",
+        "hoseLengthFt": 200,
+        "timeLimitSec": 150,
+        "options": {
+          "allowFoam": false,
+          "elevationGainFt": 0
+        },
+        "hiddenGoals": {
+          "targetPDPpsi": 150,
+          "minHydrantResidualPsi": 20,
+          "requiredHoseLengthFt": 200
+        }
+      }
+    ]
+  },
+  {
+    "id": "seed-exposure-protection-monitor",
+    "name": "Exposure Protection - Master Stream",
+    "unitDesignation": "Engine 2",
+    "incidentType": "structure",
+    "evolutions": [
+      {
+        "id": "evo-exposure-1",
+        "kind": "deploy_crosslay",
+        "label": "Deploy initial attack line",
+        "hoseLengthFt": 200,
+        "timeLimitSec": 120,
+        "hiddenGoals": {
+          "targetPDPpsi": 150,
+          "minHydrantResidualPsi": 20
+        }
+      },
+      {
+        "id": "evo-exposure-2",
+        "kind": "exposure_monitor",
+        "label": "Deploy master stream for exposure protection",
+        "hoseLengthFt": 200,
+        "timeLimitSec": 180,
+        "options": {
+          "allowFoam": true
+        },
+        "hiddenGoals": {
+          "targetPDPpsi": 180,
+          "minHydrantResidualPsi": 20,
+          "requiredHoseLengthFt": 200
+        }
+      }
+    ]
+  },
+  {
+    "id": "seed-draft-operations",
+    "name": "Draft Operations - Static Water Supply",
+    "unitDesignation": "Engine 3",
+    "incidentType": "wildland",
+    "evolutions": [
+      {
+        "id": "evo-draft-1",
+        "kind": "draft",
+        "label": "Establish draft from static water source",
+        "timeLimitSec": 240,
+        "hiddenGoals": {
+          "targetPDPpsi": 150,
+          "minHydrantResidualPsi": 0
+        }
+      }
+    ]
+  },
+  {
+    "id": "seed-standpipe-fdc",
+    "name": "High-Rise - Standpipe/FDC Operations",
+    "unitDesignation": "Engine 4",
+    "incidentType": "structure",
+    "evolutions": [
+      {
+        "id": "evo-standpipe-1",
+        "kind": "standpipe_fdc",
+        "label": "Supply FDC and establish standpipe operations",
+        "hoseLengthFt": 100,
+        "timeLimitSec": 180,
+        "options": {
+          "elevationGainFt": 50
+        },
+        "hiddenGoals": {
+          "targetPDPpsi": 200,
+          "minHydrantResidualPsi": 20
+        }
+      }
+    ]
+  }
+]

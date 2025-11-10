@@ -1,7 +1,14 @@
 import { create } from 'zustand'
 import type { ScenarioId } from './store'
 
-export type LauncherMode = 'panel' | 'scenario' | 'hydrant_lab' | 'scenario_admin' | 'scenario_runner' | 'nozzle_admin' | null
+export type LauncherMode = 'panel' | 'scenario' | 'hydrant_lab' | 'scenarios' | 'settings' | null
+
+// Mode aliases for backward compatibility during migration
+export const MODE_ALIASES: Record<string, LauncherMode> = {
+  'scenario_admin': 'scenarios',
+  'scenario_runner': 'scenarios',
+  'nozzle_admin': 'settings', // Redirect old nozzle_admin to settings
+}
 
 export interface LauncherState {
   chosenMode: LauncherMode
@@ -28,8 +35,11 @@ export const useLauncher = create<LauncherState>((set) => ({
   loadPreference: () => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored === 'panel' || stored === 'scenario' || stored === 'hydrant_lab' || stored === 'scenario_admin' || stored === 'scenario_runner') {
-        set({ preferredMode: stored, chosenMode: stored })
+      // Apply mode aliases
+      const effectiveMode = stored && MODE_ALIASES[stored] ? MODE_ALIASES[stored] : stored
+      
+      if (effectiveMode === 'panel' || effectiveMode === 'scenario' || effectiveMode === 'hydrant_lab' || effectiveMode === 'scenarios' || effectiveMode === 'settings') {
+        set({ preferredMode: effectiveMode as LauncherMode, chosenMode: effectiveMode as LauncherMode })
       }
     } catch {
       // localStorage not available

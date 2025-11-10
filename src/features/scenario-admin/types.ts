@@ -46,9 +46,27 @@ export interface Scenario {
   unitDesignation: string;         // Engine 1, etc.
   incidentType: IncidentType;
   evolutions: EvoSpec[];
+  
+  // Built-in scenario metadata
+  builtIn: boolean;                // true for seeded scenarios
+  locked: boolean;                 // true prevents editing
+  source: 'seed' | 'user';         // origin tracking
+  
   createdAt: number;               // Unix timestamp
   updatedAt: number;               // Unix timestamp
   version: 1;                      // Schema version for future migrations
+}
+
+/**
+ * Schema for scenario seeds
+ * Used to populate built-in scenarios on first launch
+ */
+export interface ScenarioSeed {
+  id: string;                      // stable ID for upgrades
+  name: string;
+  unitDesignation: string;
+  incidentType: IncidentType;
+  evolutions: EvoSpec[];
 }
 
 /**

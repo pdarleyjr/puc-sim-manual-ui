@@ -34,6 +34,9 @@ export function createEmptyScenario(): Scenario {
     unitDesignation: 'Engine 1',
     incidentType: 'structure',
     evolutions: [createEmptyEvolution()],
+    builtIn: false,
+    locked: false,
+    source: 'user',
     createdAt: Date.now(),
     updatedAt: Date.now(),
     version: 1,
@@ -52,6 +55,9 @@ export function duplicateScenario(scenario: Scenario): Scenario {
       ...evo,
       id: generateId(),
     })),
+    builtIn: false,      // User copies are not built-in
+    locked: false,       // User copies are editable
+    source: 'user',      // Always user when duplicated
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };

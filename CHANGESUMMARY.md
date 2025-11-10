@@ -9,10 +9,199 @@
 ### Removed
 - **Foam System tab**: Removed legacy Foam System mode from launcher. Existing pump engagement options (Water Pump and Water Pump + Foam Manifold) remain unchanged and fully functional.
 
-**Date**: October 27, 2025
+## [Phase 6] Brand Removal - 2025-01-10
 
-**Live URL**: https://pdarleyjr.github.io/puc-sim-manual-ui/
-**Rollback Point**: Tag `safety-pre-upgrade-2025-10-27-1603` / Branch `safety/pre-upgrade-2025-10-27`
+### Vendor-Neutral Branding
+
+**Modified:**
+- [`src/ui/SettingsModal.tsx`](src/ui/SettingsModal.tsx:110) - Replaced "Pierce PUC Manual Simulator" with "Fire Pump Manual Simulator"
+- [`src/ui/Cards.tsx`](src/ui/Cards.tsx:967) - Replaced "Pierce PUC" with "Fire Pump Simulator" (2 occurrences)
+- [`README.md`](README.md:1) - Updated with project description and vendor-neutral naming
+- [`package.json`](package.json:2) - Updated package name from "puc-sim-manual-ui" to "fire-pump-simulator-ui"
+- [`index.html`](index.html:7) - Updated page title from "PUC Pump Simulator" to "Fire Pump Simulator"
+
+**Technical Debt:**
+- localStorage keys with `puc_` prefix (`puc_friction_loss_overrides` in [`src/state/store.ts`](src/state/store.ts:434)) remain unchanged for backward compatibility
+- Future consideration: Storage migration v3 to rename localStorage keys (requires user data migration strategy)
+
+**Result:**
+- ✅ Zero user-visible brand references to Pierce or PUC
+- ✅ Application is now fully vendor-neutral
+- ✅ Existing user data preserved (no breaking changes)
+- ✅ All UI text, titles, and package metadata updated
+
+**Date**: January 10, 2025
+
+## [Phase 5] Hydrant Lab Flexibility - 2025-01-10
+
+### Complete Equipment Customization
+
+**Added:**
+- [`src/features/hydrant-lab/types.ts`](src/features/hydrant-lab/types.ts:1) - FlexibleDischargeLine interface with full customization support
+- [`src/features/hydrant-lab/components/EquipmentSelector.tsx`](src/features/hydrant-lab/components/EquipmentSelector.tsx:1) - Mobile-first equipment configuration modal
+- [`calculateFlexibleDischargePDP()`](src/features/hydrant-lab/math.ts:308) in math.ts - Hydraulic calculations for arbitrary configurations
+
+**Modified:**
+- [`src/features/hydrant-lab/store.ts`](src/features/hydrant-lab/store.ts:1) - Added flexible discharge state management and mode toggle
+- [`src/features/hydrant-lab/ConfigTray.tsx`](src/features/hydrant-lab/ConfigTray.tsx:1) - Integrated EquipmentSelector with flexible/legacy mode toggle
+- [`recompute()`](src/features/hydrant-lab/store.ts:466) - Enhanced to calculate flexible discharge lines
+
+**Removed:**
+- NOZZLE_LIBRARY restrictions on equipment combinations (library retained for backward compatibility)
+- Fixed hose/nozzle pairing constraints
+- Equipment combination limitations in discharge system
+
+**Capabilities:**
+- Mix ANY hose diameter (1.75" - 5") with ANY length (0-1000 ft)
+- Select ANY nozzle type (smooth bore, fog variants, monitor, master stream) or none for supply lines
+- Configure ANY nozzle specifications (tip diameter, flow rate, nozzle pressure)
+- Add optional appliances (monitor +25 PSI, wye +10 PSI, elevation compensation)
+- Real-time hydraulic calculations with NFPA-compliant formulas
+- Configuration warnings (not restrictions) for unusual setups
+- Smooth bore flow adjusts dynamically based on available pressure
+- Fog nozzles maintain constant flow with pressure warnings
+
+**Mobile Optimization:**
+- All touch targets ≥48px throughout interface
+- Scrollable modal with sticky header/footer for long forms
+- Responsive grid layouts adapt to screen size
+- Large, thumb-friendly controls for all inputs
+- Visual feedback for configuration warnings
+
+**User Experience:**
+- Toggle between flexible and legacy modes
+- Warnings encourage experimentation without blocking configurations
+- Live calculation feedback shows PDP, GPM, friction loss, and nozzle pressure
+- Remove or toggle individual discharge lines
+- Configuration badges show equipment specs at a glance
+
+**Technical Highlights:**
+- Type-safe flexible discharge interface
+- Independent calculation engine function for testability
+- Backward-compatible with existing discharge system
+- Zustand state management with efficient recomputation
+- Mobile-first responsive design with Tailwind CSS
+
+## [Phase 4] Settings Architecture - 2025-11-10
+
+### Settings Parent Tab with Subsections
+
+**Added:**
+- [`src/features/settings/`](src/features/settings/) - New Settings feature with parent/child navigation
+- [`src/features/settings/types.ts`](src/features/settings/types.ts) - Settings types (SettingsSection, SettingsNavState)
+- [`src/features/settings/store.ts`](src/features/settings/store.ts) - Zustand store for settings navigation and auto-save
+- [`src/features/settings/SettingsRoute.tsx`](src/features/settings/SettingsRoute.tsx) - Parent route with tabbed subsections
+- [`src/features/settings/components/BackButton.tsx`](src/features/settings/components/BackButton.tsx) - Persistent back navigation with auto-save
+- [`src/features/settings/sections/EquipmentConfigRoute.tsx`](src/features/settings/sections/EquipmentConfigRoute.tsx) - Equipment configuration subsection
+- [`src/features/settings/sections/ScenarioBuilderRoute.tsx`](src/features/settings/sections/ScenarioBuilderRoute.tsx) - Scenario builder subsection
+- [`src/features/settings/index.ts`](src/features/settings/index.ts) - Feature barrel export
+- Touch target CSS utility (`.touch-target-min` for ≥44px WCAG compliance) in [`src/styles/tailwind.css`](src/styles/tailwind.css)
+
+**Modified:**
+- [`src/ui/launcher/ModeLauncher.tsx`](src/ui/launcher/ModeLauncher.tsx) - Added Settings card, removed Nozzle Admin card
+- [`src/state/launcher.ts`](src/state/launcher.ts) - Added 'settings' mode, removed 'nozzle_admin', added mode alias for backward compatibility
+- [`src/features/scenario-admin/ScenariosRoute.tsx`](src/features/scenario-admin/ScenariosRoute.tsx) - Simplified to runner-only (edit moved to Settings)
+- [`src/features/scenario-admin/components/ScenarioList.tsx`](src/features/scenario-admin/components/ScenarioList.tsx) - Made edit/run buttons conditional via props
+- [`src/app/App.tsx`](src/app/App.tsx) - Added Settings routing, removed NozzleAdminRoute
+
+**Restructure:**
+- **Before:** Nozzle Admin (top-level), Scenario Admin (top-level), Scenario Runner (top-level)
+- **After:** 
+  - Settings (parent) → Equipment Config + Scenario Builder (subsections)
+  - Scenarios (top-level, runner only)
+
+**Navigation:**
+- All routes now include BackButton component with auto-save
+- Back button saves changes to localStorage before navigation
+- Touch targets meet WCAG 2.1 AA standards (≥44px)
+- Settings parent contains two tabbed subsections with persistent navigation
+
+**Equipment Configuration Subsection:**
+- Discharge defaults table with hose/nozzle specifications
+- Three tabs: Discharge Defaults, Nozzle Library (placeholder), Hose Library (placeholder)
+- Export/Import configuration JSON functionality
+- Reset to factory defaults with confirmation
+
+**Scenario Builder Subsection:**
+- Full CRUD operations: create, edit, duplicate, delete scenarios
+- Separated from runner view (which remains in top-level Scenarios tab)
+- List view with built-in scenario lockdown
+- Editor integration with existing ScenarioEditor component
+
+**User Experience:**
+- Single Settings entry point for all configuration
+- Consistent Back button navigation across all routes
+- Auto-save functionality prevents data loss
+- Clear separation between configuration (Settings) and execution (Scenarios runner)
+
+**Breaking Changes:** 
+- `nozzle_admin` mode removed from launcher (aliased to `settings` for backward compatibility)
+- ScenarioList component now requires explicit prop configuration for edit/run buttons
+
+**Date**: November 10, 2025
+
+## [Phase 2] Foundation & Storage - 2025-11-10
+
+### Equipment Defaults System
+
+**Added:**
+- [`src/features/equipment-config/`](src/features/equipment-config/) - New feature module for equipment configuration
+- [`src/features/equipment-config/types.ts`](src/features/equipment-config/types.ts) - TypeScript interfaces for discharge defaults
+- [`src/features/equipment-config/seeds.ts`](src/features/equipment-config/seeds.ts) - Factory defaults for all 8 discharge types
+- [`src/features/equipment-config/storage.ts`](src/features/equipment-config/storage.ts) - IndexedDB storage layer using localForage (`fps-equipment-defaults-v1`)
+- [`src/features/equipment-config/store.ts`](src/features/equipment-config/store.ts) - Zustand store for equipment configuration state management
+- [`src/features/equipment-config/index.ts`](src/features/equipment-config/index.ts) - Barrel export for feature module
+- [`tests/equipment-config.test.ts`](tests/equipment-config.test.ts) - Comprehensive unit tests (15+ tests)
+- Storage migration system with version checking (localStorage: `fps_storage_version`)
+- Import/Export JSON functionality for equipment defaults backup/sharing
+
+**Modified:**
+- [`src/app/App.tsx`](src/app/App.tsx:63-78) - Added initialization: storage migration + equipment defaults loading on app startup
+
+**Factory Default Specifications:**
+- **Primary Crosslay (xlay1)**: 200ft × 1.75" hose + 75 PSI, 175 GPM fog nozzle (presetId: `key_combat_ready_175`)
+- **Trash Line (trashline)**: 100ft × 1.75" hose + 75 PSI, 175 GPM fog nozzle (presetId: `key_combat_ready_175`)
+- **Crosslay 2 & 3 (xlay2, xlay3)**: Same as Primary Crosslay
+- **2.5" Skid Load (twohalfA)**: 3" supply (100ft default) + 7/8" smooth bore @ 50 PSI, 150 GPM (user-configurable length)
+- **2.5" Portable Standpipe (twohalfB)**: Same as Skid Load
+- **2.5" FDC (twohalfC)**: 3" supply only, 0ft attack line (no nozzle at pump)
+- **2.5" Discharge D (twohalfD)**: 150ft × 2.5" hose + 100 PSI, 150 GPM fog nozzle (presetId: `key_2.5in`)
+
+**Architecture:**
+```
+IndexedDB (localforage)
+    ↓ fps-equipment-defaults-v1 store
+Storage Layer (storage.ts)
+    ↓ CRUD operations
+Zustand Store (store.ts)
+    ↓ State management
+Components (Phase 3+)
+    ↓ Equipment configuration UI
+```
+
+**Testing:**
+- Comprehensive unit tests for storage, migration, and factory defaults
+- Validates all 8 discharge specifications per architecture requirements
+- Tests version migration (v0 → v1)
+- Tests persistence of custom defaults
+- Tests reset to factory defaults
+- Tests export/import JSON functionality
+
+**Migration System:**
+- Version 0 (new install) → Version 1: Initialize equipment defaults with factory seeds
+- LocalStorage key: `fps_storage_version`
+- Automatic migration on app startup via [`migrateStorage()`](src/features/equipment-config/storage.ts:66)
+- Zero data loss: existing data preserved during migrations
+
+**Foundation for Future Phases:**
+This foundation layer enables:
+- **Phase 3**: Scenarios Unification - Equipment defaults used by scenario evolutions
+- **Phase 4**: Settings UI - User interface for editing equipment configuration
+- **Phase 5**: Hydrant Lab Flexibility - Dynamic equipment configuration in lab mode
+
+**Breaking Changes:** None (new feature, no existing functionality modified)
+
+**Date**: October 27, 2025
 
 ## Overview
 

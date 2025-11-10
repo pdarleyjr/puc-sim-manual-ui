@@ -1,3 +1,9 @@
+# Fire Pump Simulator
+
+A comprehensive fire pump operation and hydraulics training simulator. This application provides manual-mode operation training for firefighters, allowing them to practice pump operations, hydrant setups, and understand hydraulic calculations in a safe, virtual environment.
+
+---
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

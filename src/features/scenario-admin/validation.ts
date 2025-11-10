@@ -47,6 +47,9 @@ export const ScenarioSchema = z.object({
   unitDesignation: z.string().min(1, 'Unit designation required'), // e.g., "Engine 1"
   incidentType: IncidentTypeSchema,
   evolutions: z.array(EvoSpecSchema).min(1, 'At least one evolution required'),
+  builtIn: z.boolean(),
+  locked: z.boolean(),
+  source: z.enum(['seed', 'user']),
   createdAt: z.number(),
   updatedAt: z.number(),
   version: z.literal(1), // Schema version for future migrations

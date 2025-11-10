@@ -964,7 +964,7 @@ export function PumpDataCard() {
       
       {/* Info Footer */}
       <div className="mt-4 text-xs text-center opacity-60">
-        <p>Pierce PUC</p>
+        <p>Fire Pump Simulator</p>
         <p>Manual Mode</p>
       </div>
       
@@ -985,7 +985,7 @@ export function InfoCard() {
     <div className="puc-card">
       <h3 className="text-sm font-semibold mb-2 text-center opacity-80">MISC</h3>
       <div className="text-xs text-center opacity-60">
-        <p>Pierce PUC</p>
+        <p>Fire Pump Simulator</p>
         <p>Manual Mode</p>
       </div>
     </div>

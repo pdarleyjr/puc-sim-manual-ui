@@ -303,3 +303,84 @@ export function computeMonitorOutput(
   // Actual flow = min of demand and available supply
   return Math.min(demand, totalInflowGpm)
 }
+
+/**
+ * Calculate flexible discharge line hydraulics
+ * Supports ANY combination of hose, nozzle, and appliances for experimental testing
+ */
+export function calculateFlexibleDischargePDP(
+  hoseDiameter: number,
+  hoseLengthFt: number,
+  nozzle: { kind: string; tipDiameterIn?: number; ratedGPM?: number; ratedNPpsi?: number } | null,
+  appliances: { monitor?: boolean; wye?: boolean; elevationFt?: number } | undefined,
+  pdpPsi: number
+): {
+  flowGPM: number
+  frictionLossPsi: number
+  nozzlePressurePsi: number
+  requiredGPM: number
+  warnings: string[]
+} {
+  const warnings: string[] = []
+  
+  // Calculate nozzle flow demand
+  let requiredGPM = 0
+  let nozzleNP = nozzle?.ratedNPpsi ?? 100
+  
+  if (nozzle?.kind === 'smooth_bore' && nozzle.tipDiameterIn) {
+    // Smooth bore: Q = 29.7 × d² × √P
+    requiredGPM = nozzleSmoothBoreGpm(nozzle.tipDiameterIn, nozzleNP)
+  } else if (nozzle?.ratedGPM) {
+    // Constant flow nozzle
+    requiredGPM = nozzle.ratedGPM
+  }
+  
+  // Calculate friction loss: FL = C × (Q/100)² × (L/100)
+  const C = getFrictionCoefficient(hoseDiameter)
+  const Q = requiredGPM / 100
+  const L = hoseLengthFt / 100
+  const frictionLoss = C * Q * Q * L
+  
+  // Calculate appliance losses
+  let applianceLoss = 0
+  if (appliances?.monitor) applianceLoss += APPLIANCE_MS
+  if (appliances?.wye) applianceLoss += 10
+  
+  // Elevation loss: 0.434 PSI/ft
+  const elevationLoss = (appliances?.elevationFt ?? 0) * 0.434
+  
+  // Available pressure at nozzle
+  const availablePressure = Math.max(0, pdpPsi - frictionLoss - applianceLoss - elevationLoss)
+  
+  // Adjust flow for smooth bore based on available pressure
+  let actualFlowGPM = requiredGPM
+  if (nozzle?.kind === 'smooth_bore' && nozzle.tipDiameterIn) {
+    actualFlowGPM = nozzleSmoothBoreGpm(nozzle.tipDiameterIn, availablePressure)
+  } else if (availablePressure < nozzleNP * 0.7) {
+    // Fog nozzle with insufficient pressure
+    actualFlowGPM = requiredGPM * (availablePressure / nozzleNP)
+    warnings.push('Insufficient pressure at nozzle')
+  }
+  
+  // Generate warnings for unusual configurations
+  if (hoseDiameter >= 4.0 && requiredGPM < 200) {
+    warnings.push('Large diameter hose with low flow may be inefficient')
+  }
+  if (frictionLoss > 50) {
+    warnings.push('High friction loss - consider larger diameter or shorter length')
+  }
+  if (pdpPsi > 250) {
+    warnings.push('PDP exceeds typical pump capabilities')
+  }
+  if (hoseDiameter < 2.5 && requiredGPM > 300) {
+    warnings.push('Small hose with high flow - very high friction loss')
+  }
+  
+  return {
+    flowGPM: Math.round(actualFlowGPM),
+    frictionLossPsi: Math.round(frictionLoss * 10) / 10,
+    nozzlePressurePsi: Math.round(availablePressure * 10) / 10,
+    requiredGPM: Math.round(requiredGPM),
+    warnings
+  }
+}

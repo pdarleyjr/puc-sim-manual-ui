@@ -107,7 +107,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <div className="puc-card">
                 <h3 className="font-semibold mb-2">About</h3>
                 <div className="text-sm opacity-60 space-y-1">
-                  <p>Pierce PUC Manual Simulator</p>
+                  <p>Fire Pump Manual Simulator</p>
                   <p>Manual-only operation mode</p>
                   <p>No automatic valve control</p>
                 </div>

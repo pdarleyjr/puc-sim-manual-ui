@@ -1,7 +1,15 @@
+import { useState } from 'react'
 import { useHydrantLab, type PortId } from './store'
+import { EquipmentSelector } from './components/EquipmentSelector'
 
 export function ConfigTray() {
   const s = useHydrantLab()
+  const [showSelector, setShowSelector] = useState(false)
+  
+  const handleAddEquipment = (config: any) => {
+    s.addFlexibleDischarge(config)
+    setShowSelector(false)
+  }
   
   const renderLegConfig = (portId: PortId, label: string) => {
     const leg = s.legs[portId]
@@ -101,6 +109,107 @@ export function ConfigTray() {
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold opacity-70 uppercase tracking-wide">Configuration</h3>
+      
+      {/* Flexible Discharge Mode Toggle */}
+      <div className="border border-white/10 rounded-lg p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-sm font-semibold opacity-70">Equipment Mode</h4>
+          <button
+            onClick={() => s.setFlexibleMode(!s.useFlexibleMode)}
+            className={`text-xs px-3 py-1 rounded font-semibold transition-colors ${
+              s.useFlexibleMode 
+                ? 'bg-blue-500/20 text-blue-300' 
+                : 'bg-white/10 text-white/60'
+            }`}
+          >
+            {s.useFlexibleMode ? 'FLEXIBLE' : 'LEGACY'}
+          </button>
+        </div>
+        <p className="text-xs opacity-60">
+          {s.useFlexibleMode 
+            ? 'Custom equipment combinations enabled' 
+            : 'Using preset equipment configurations'}
+        </p>
+      </div>
+      
+      {/* Flexible Discharge Configuration */}
+      {s.useFlexibleMode && (
+        <div className="border border-white/10 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold opacity-70">Discharge Lines</h4>
+            <button
+              onClick={() => setShowSelector(true)}
+              className="text-xs px-3 py-2 rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition-colors font-semibold"
+              style={{ minHeight: '32px' }}
+            >
+              + Add Equipment
+            </button>
+          </div>
+          
+          {/* List of configured flexible discharges */}
+          {s.flexibleDischarges.length === 0 ? (
+            <p className="text-xs opacity-60 text-center py-4">
+              No discharge lines configured. Click "Add Equipment" to start.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {s.flexibleDischarges.map(line => (
+                <div key={line.id} className="bg-white/5 rounded p-3 space-y-2">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold">
+                        {line.hose.diameter}" × {line.hose.lengthFt}'
+                      </div>
+                      <div className="text-xs opacity-60">
+                        {line.nozzle ? (
+                          <>
+                            {line.nozzle.kind.replace(/_/g, ' ').toUpperCase()}
+                            {line.nozzle.tipDiameterIn && ` (${line.nozzle.tipDiameterIn}")`}
+                            {line.nozzle.ratedGPM && ` @ ${line.nozzle.ratedGPM} GPM`}
+                          </>
+                        ) : 'Supply Line'}
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => s.toggleFlexibleDischargeGate(line.id)}
+                        className={`text-xs px-2 py-1 rounded transition-colors ${
+                          line.isOpen 
+                            ? 'bg-emerald-500/20 text-emerald-300' 
+                            : 'bg-red-500/20 text-red-300'
+                        }`}
+                      >
+                        {line.isOpen ? 'OPEN' : 'CLOSED'}
+                      </button>
+                      <button
+                        onClick={() => s.removeFlexibleDischarge(line.id)}
+                        className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Flow display */}
+                  {line.isOpen && (
+                    <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                      <div className="text-xs opacity-60">Flow:</div>
+                      <div className="text-sm font-bold tabular-nums">{Math.round(line.flowGPM)} GPM</div>
+                    </div>
+                  )}
+                  
+                  {/* Warnings */}
+                  {line.warnings && line.warnings.length > 0 && (
+                    <div className="text-xs text-yellow-300 bg-yellow-500/10 px-2 py-1 rounded">
+                      ⚠️ {line.warnings[0]}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       
       {/* Governor control */}
       <div className="border border-white/10 rounded-lg p-3">
@@ -230,6 +339,14 @@ export function ConfigTray() {
           </div>
         )}
       </div>
+      
+      {/* Equipment Selector Modal */}
+      {showSelector && (
+        <EquipmentSelector
+          onAdd={handleAddEquipment}
+          onCancel={() => setShowSelector(false)}
+        />
+      )}
     </div>
   )
 }

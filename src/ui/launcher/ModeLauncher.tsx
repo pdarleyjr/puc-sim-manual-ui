@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { ChevronRight, Gauge, Radio, Droplet, Settings, Play, Wrench } from 'lucide-react'
+import { ChevronRight, Gauge, Radio, Droplet, ClipboardList, Settings } from 'lucide-react'
 import { useLauncher, type LauncherMode } from '../../state/launcher'
 import type { ScenarioId } from '../../state/store'
 import { featureFlag } from '../../flags'
@@ -75,9 +75,8 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
   const panelRef = useRef<HTMLInputElement>(null)
   const scenarioRef = useRef<HTMLInputElement>(null)
   const hydrantLabRef = useRef<HTMLInputElement>(null)
-  const scenarioAdminRef = useRef<HTMLInputElement>(null)
-  const scenarioRunnerRef = useRef<HTMLInputElement>(null)
-  const nozzleAdminRef = useRef<HTMLInputElement>(null)
+  const scenariosRef = useRef<HTMLInputElement>(null)
+  const settingsRef = useRef<HTMLInputElement>(null)
   
   // Load saved preference on mount
   useEffect(() => {
@@ -90,10 +89,10 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
       if (step !== 1) return
       
       const modes: LauncherMode[] = featureFlag('SCENARIO_ADMIN') 
-        ? ['panel', 'scenario', 'hydrant_lab', 'scenario_admin', 'scenario_runner', 'nozzle_admin']
+        ? ['panel', 'scenario', 'hydrant_lab', 'scenarios', 'settings']
         : ['panel', 'scenario', 'hydrant_lab']
       const refs = featureFlag('SCENARIO_ADMIN')
-        ? [panelRef, scenarioRef, hydrantLabRef, scenarioAdminRef, scenarioRunnerRef, nozzleAdminRef]
+        ? [panelRef, scenarioRef, hydrantLabRef, scenariosRef, settingsRef]
         : [panelRef, scenarioRef, hydrantLabRef]
       const currentIndex = modes.indexOf(chosenMode)
       
@@ -198,33 +197,23 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
               {featureFlag('SCENARIO_ADMIN') && (
                 <>
                   <ModeCard
-                    mode="scenario_admin"
+                    mode="scenarios"
+                    icon={<ClipboardList size={24} />}
+                    title="Scenarios"
+                    description="Run training evolutions or create custom NFPA-1410 scenarios"
+                    selected={chosenMode === 'scenarios'}
+                    onSelect={() => setMode('scenarios')}
+                    inputRef={scenariosRef}
+                  />
+                  
+                  <ModeCard
+                    mode="settings"
                     icon={<Settings size={24} />}
-                    title="Scenario Admin"
-                    description="Build and manage NFPA-1410 training scenarios"
-                    selected={chosenMode === 'scenario_admin'}
-                    onSelect={() => setMode('scenario_admin')}
-                    inputRef={scenarioAdminRef}
-                  />
-                  
-                  <ModeCard
-                    mode="scenario_runner"
-                    icon={<Play size={24} />}
-                    title="Scenario Runner"
-                    description="Execute NFPA-1410 training scenarios"
-                    selected={chosenMode === 'scenario_runner'}
-                    onSelect={() => setMode('scenario_runner')}
-                    inputRef={scenarioRunnerRef}
-                  />
-                  
-                  <ModeCard
-                    mode="nozzle_admin"
-                    icon={<Wrench size={24} />}
-                    title="Nozzle Profiles"
-                    description="Manage NFPA-compliant nozzle presets and category defaults"
-                    selected={chosenMode === 'nozzle_admin'}
-                    onSelect={() => setMode('nozzle_admin')}
-                    inputRef={nozzleAdminRef}
+                    title="Settings"
+                    description="Configure equipment, create scenarios, and manage preferences"
+                    selected={chosenMode === 'settings'}
+                    onSelect={() => setMode('settings')}
+                    inputRef={settingsRef}
                   />
                 </>
               )}
@@ -244,9 +233,8 @@ export function ModeLauncher({ onEnter }: { onEnter: (mode: LauncherMode, scenar
                     chosenMode === 'panel' ? 'Panel Only' : 
                     chosenMode === 'scenario' ? 'Scenario Mode' : 
                     chosenMode === 'hydrant_lab' ? 'Hydrant Connection Lab' :
-                    chosenMode === 'scenario_admin' ? 'Scenario Admin' :
-                    chosenMode === 'scenario_runner' ? 'Scenario Runner' :
-                    chosenMode === 'nozzle_admin' ? 'Nozzle Profiles' :
+                    chosenMode === 'scenarios' ? 'Scenarios' :
+                    chosenMode === 'settings' ? 'Settings' :
                     'this mode'
                   } on this device
                 </span>

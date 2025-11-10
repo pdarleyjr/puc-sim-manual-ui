@@ -1,11 +1,23 @@
 import { useRef } from 'react';
-import { Plus, Download, Upload, Copy, Trash2 } from 'lucide-react';
+import { Plus, Download, Upload, Copy, Trash2, Lock } from 'lucide-react';
 import { useScenarioAdmin } from '../store';
 import { getIncidentTypeLabel } from '../utils';
 import { EXAMPLE_SCENARIOS } from '../examples';
 import * as storage from '../storage';
 
-export function ScenarioList() {
+interface ScenarioListProps {
+  onEdit?: (id: string) => void
+  onRun?: (id: string) => void
+  showEditButton?: boolean
+  showRunButton?: boolean
+}
+
+export function ScenarioList({ 
+  onEdit, 
+  onRun, 
+  showEditButton = true, 
+  showRunButton = true 
+}: ScenarioListProps = {}) {
   const {
     scenarios,
     activeScenarioId,
@@ -66,13 +78,15 @@ export function ScenarioList() {
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 space-y-2">
-        <button
-          onClick={createScenario}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 min-h-[48px]"
-        >
-          <Plus className="w-4 h-4" />
-          New Scenario
-        </button>
+        {showEditButton && (
+          <button
+            onClick={createScenario}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 min-h-[48px]"
+          >
+            <Plus className="w-4 h-4" />
+            New Scenario
+          </button>
+        )}
 
         <div className="flex gap-2">
           <button
@@ -128,9 +142,19 @@ export function ScenarioList() {
           >
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-gray-900 truncate">
-                  {scenario.name}
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-gray-900 truncate">
+                    {scenario.name}
+                  </h3>
+                  {scenario.builtIn && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-100 text-blue-800 text-xs font-medium">
+                      Built-in
+                    </span>
+                  )}
+                  {scenario.locked && (
+                    <Lock className="h-4 w-4 text-gray-400" />
+                  )}
+                </div>
                 <p className="text-sm text-gray-600 mt-1">
                   {scenario.unitDesignation} • {getIncidentTypeLabel(scenario.incidentType)}
                 </p>
@@ -140,6 +164,36 @@ export function ScenarioList() {
               </div>
 
               <div className="flex gap-1 ml-2">
+                {showEditButton && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!scenario.locked && onEdit) {
+                        onEdit(scenario.id);
+                      } else if (scenario.locked) {
+                        duplicateScenarioAction(scenario.id);
+                      }
+                    }}
+                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                    title={scenario.locked ? "Duplicate to customize" : "Edit"}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                )}
+                
+                {showRunButton && onRun && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRun(scenario.id);
+                    }}
+                    className="px-3 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded"
+                    title="Run scenario"
+                  >
+                    Run
+                  </button>
+                )}
+                
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -150,18 +204,26 @@ export function ScenarioList() {
                 >
                   <Copy className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm('Delete this scenario?')) {
-                      deleteScenario(scenario.id);
-                    }
-                  }}
-                  className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
-                  title="Delete"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                
+                {showEditButton && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!scenario.locked && confirm('Delete this scenario?')) {
+                        deleteScenario(scenario.id);
+                      }
+                    }}
+                    disabled={scenario.locked}
+                    className={`p-2 rounded ${
+                      scenario.locked
+                        ? 'text-gray-300 cursor-not-allowed'
+                        : 'text-gray-500 hover:text-red-600 hover:bg-red-50'
+                    }`}
+                    title={scenario.locked ? "Cannot delete built-in scenarios" : "Delete"}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           </div>

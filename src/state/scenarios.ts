@@ -1,3 +1,11 @@
+/**
+ * @deprecated This file contains legacy hardcoded scenarios.
+ * These have been migrated to seeded scenarios in scenario-admin/seeds.json
+ * This file is kept for reference only and will be removed in a future version.
+ * 
+ * To use scenarios, use the unified Scenarios feature (scenario-admin/ScenariosRoute.tsx)
+ */
+
 import type { AppState, ScenarioId, DischargeId } from './store'
 
 // Jitter helper: adds ±j% variance to time

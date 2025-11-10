@@ -9,7 +9,7 @@ import { validateScenario } from './validation';
  */
 
 // Create separate stores for scenarios and run history
-const scenarioStore = localforage.createInstance({
+export const scenarioStore = localforage.createInstance({
   name: 'puc-sim',
   storeName: 'scenarios',
   description: 'Fire pump training scenarios'
