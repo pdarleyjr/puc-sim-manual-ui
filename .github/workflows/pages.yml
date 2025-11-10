@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VITE_MOBILE_APP_UI: 'true'
+      VITE_SCENARIO_ADMIN: 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
